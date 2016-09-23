@@ -5,16 +5,28 @@ type i =
 | S_LD    of string
 | S_ST    of string
 | S_BINOP of string
+| S_JMP   of int
+| S_JZ    of int
 
 module Interpreter =
   struct
     open Language.Expr
 
     let run input code =
-      let rec run' (state, stack, input, output) code =
-        match code with
-        | []       -> output
-        | i::code' ->
+      let rec run' (state, stack, input, output) iptr =
+        if iptr >= Array.length code then
+          output
+        else
+          let i = code.(iptr) in
+          match i with
+          | S_JMP diff ->
+              run' (state, stack, input, output) (iptr + 1 + diff)
+          | S_JZ diff ->
+              let y::stack' = stack in
+              run'
+                (state, stack', input, output)
+                (iptr + 1 + (if y = 0 then diff else 0))
+          | _ ->
             run'
               (match i with
               | S_READ ->
@@ -34,9 +46,9 @@ module Interpreter =
                   let r::l::stack' = stack in
                   (state, (eval_binop s l r)::stack', input, output)
               )
-              code'
+              (iptr + 1)
       in
-      run' ([], [], input, []) code
+      run' ([], [], input, []) 0
   end
 
 module Compile =
@@ -45,16 +57,24 @@ module Compile =
     open Language.Expr
     open Language.Stmt
 
-    let rec expr = function
-    | Var   x -> [S_LD   x]
-    | Const n -> [S_PUSH n]
-    | Binop (s, x, y) -> expr x @ expr y @ [S_BINOP s]
+    let rec expr : Language.Expr.t -> i array = function
+    | Var   x -> [|S_LD   x|]
+    | Const n -> [|S_PUSH n|]
+    | Binop (s, x, y) -> Array.concat [expr x; expr y; [|S_BINOP s|]]
 
     let rec stmt = function
-    | Skip          -> []
-    | Assign (x, e) -> expr e @ [S_ST x]
-    | Read    x     -> [S_READ; S_ST x]
-    | Write   e     -> expr e @ [S_WRITE]
-    | Seq    (l, r) -> stmt l @ stmt r
-
+    | Skip          -> [||]
+    | Assign (x, e) -> Array.append (expr e) [|S_ST x|]
+    | Read    x     -> [|S_READ; S_ST x|]
+    | Write   e     -> Array.append (expr e) [|S_WRITE|]
+    | Seq    (l, r) -> Array.append (stmt l) (stmt r)
+    | If     (c, t, f) ->
+        let c' = expr c in
+        let t' = stmt t in
+        let f' = stmt f in
+        Array.concat [
+          c'; [|S_JZ ((Array.length t') + 1)|];
+          t'; [|S_JMP (Array.length f')|];
+          f'
+        ]
   end
