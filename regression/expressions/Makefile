@@ -6,9 +6,10 @@ check: $(TESTS)
 
 $(TESTS): export RC_RUNTIME=../../runtime/runtime.o
 $(TESTS): %: %.expr
-	cat $@.input | ../../src/rc.byte    $< > $@.log && diff $@.log orig/$@.log
-	cat $@.input | ../../src/rc.byte -s $< > $@.log && diff $@.log orig/$@.log
-	../../src/rc.byte -o $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+	cat $@.input | ../../rc.native -i $< > $@.log && diff $@.log orig/$@.log
+	cat $@.input | ../../rc.native -s $< > $@.log && diff $@.log orig/$@.log
+	../../rc.native     $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+	../../rc.native -so $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 
 clean:
 	rm -f *.log *.s *~ $(TESTS)
