@@ -64,10 +64,30 @@ let _ =
 *)
 
 let main =
-  try
-    let filename = Sys.argv.(1) in
-    match Parser.parse filename with
-    | `Ok stmt -> ignore @@ Expr.build stmt (Filename.chop_suffix filename ".expr")
-    | `Fail er -> Printf.eprintf "%s" er
-  with Invalid_argument _ ->
-    Printf.printf "Usage: rc.byte <name.expr>"
+  let interpret_flag = ref false in
+  let filename_arg : 'string option ref = ref None in
+  let speclist =
+    [("--interpret", Arg.Set interpret_flag, "Interpret program instead of compiling")] in
+  let set_filename = (fun name ->
+      match !filename_arg with
+      | None -> filename_arg := Some name
+      | (Some _) -> raise (Arg.Bad "More than one positional argument")
+    ) in
+  let usage_str = "Usage: rc.byte [--interpret] <name.expr>" in
+  Arg.parse speclist set_filename usage_str;
+  match !filename_arg with
+  | None ->
+      Printf.eprintf "No input file specified\n";
+      exit 1;
+  | (Some file) ->
+      match Parser.parse file with
+      | `Fail err -> Printf.eprintf "%s\n" err
+      | `Ok stmt ->
+        match !interpret_flag with
+        | true ->
+            Printf.eprintf "Interpreting %s...\n%!" file;
+            let result = Expr.run [] stmt in
+              List.iter (Printf.printf "%d\n") result
+        | false ->
+            ignore @@ Expr.build stmt (Filename.chop_suffix file ".expr")
+
