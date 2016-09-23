@@ -1,18 +1,13 @@
-type i =
+open GT
+@type i =
 | S_READ
 | S_WRITE
 | S_PUSH  of int
 | S_LD    of string
 | S_ST    of string
-| S_BINOP of string
+| S_BINOP of string with show
 
-let i_to_string i = match i with
-  | S_READ -> "S_READ"
-  | S_WRITE -> "S_WRITE"
-  | S_PUSH x -> Printf.sprintf "S_PUSH %d" x
-  | S_LD x -> "S_LD " ^ x
-  | S_ST x -> "S_ST " ^ x
-  | S_BINOP x -> "S_BINOP " ^ x
+let i_to_string = show(i)
 
 module Interpreter =
   struct
