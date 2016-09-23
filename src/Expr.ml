@@ -130,6 +130,7 @@ let allocate env stack =
 
 type x86instr =
   | X86Add  of opnd * opnd
+  | X86Sub  of opnd * opnd
   | X86Mul  of opnd * opnd
   | X86Mov  of opnd * opnd
   | X86Push of opnd
@@ -157,6 +158,7 @@ let slot : opnd -> string = function
   | (L i) -> Printf.sprintf "$%d" i
 let x86print : x86instr -> string = function
   | X86Add (s1, s2) -> Printf.sprintf "\taddl\t%s,\t%s"  (slot s1) (slot s2)
+  | X86Sub (s1, s2) -> Printf.sprintf "\tsubl\t%s,\t%s"  (slot s1) (slot s2)
   | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (slot s1) (slot s2)
   | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (slot s1) (slot s2)
   | X86Push s       -> Printf.sprintf "\tpushl\t%s"     (slot s )
@@ -192,6 +194,14 @@ let x86compile : x86env -> instr list -> x86instr list = fun env code ->
                            X86Add (eax, y)])
             | _ ->
               (y::stack', [X86Add (x, y)]))
+         | S_SUB   ->
+           let x::y::stack' = stack in
+           (match x, y with
+            | S _, S _ ->
+              (y::stack', [X86Mov (x, eax);
+                           X86Sub (eax, y)])
+            | _ ->
+              (y::stack', [X86Sub (x, y)]))
          | S_MUL   ->
            let x::y::stack' = stack in
             (match x, y with
