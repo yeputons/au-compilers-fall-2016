@@ -1,93 +1,51 @@
-open Expr
-open Parser
+open Ostap
 
-(*
-(*
-read (x);
-read (y);
-z := x * x;
-write (z+y)
-*)
-let p =
-  Seq (
-      Read "x",
-      Seq (
-          Read "y",
-          Seq (
-              Assign ("z", Mul (Var "x", Var "x")),
-              Write (Add (Var "z", Var "y"))
-          )
-      )
+let parse infile =
+  let s = Util.read infile in
+  Util.parse
+    (object
+       inherit Matcher.t s
+       inherit Util.Lexers.ident ["read"; "write"; "skip"] s
+       inherit Util.Lexers.decimal s
+       inherit Util.Lexers.skip [
+	 Matcher.Skip.whitespaces " \t\n";
+	 Matcher.Skip.lineComment "--";
+	 Matcher.Skip. nestedComment "(*" "*)"
+       ] s
+     end
     )
+    (ostap (!(Language.Stmt.parse) -EOF))
 
-(* let _ = *)
-(*   let [r] = run [3; 4] p in *)
-(*   Printf.printf "%d\n" r *)
+let main = ()
+  try
+    let mode, filename =
+      match Sys.argv.(1) with
+      | "-s" -> `SM , Sys.argv.(2)
+      | "-o" -> `X86, Sys.argv.(2)
+      | _    -> `Int, Sys.argv.(1)
+    in
+    match parse filename with
+    | `Ok stmt -> 
+	let rec read acc =
+	  try
+	    let r = read_int () in
+	    Printf.printf "> ";
+	    read (acc @ [r]) 
+          with End_of_file -> acc
+	in
+	let input = read [] in
+	(match mode with
+	 | `X86 -> failwith "native not supported"
+	 | `SM  ->
+	     let output = 
+	       StackMachine.Interpreter.run input (StackMachine.Compile.stmt stmt) 
+	     in
+	     List.iter (fun i -> Printf.printf "%d\n" i) output
+	 | `Int -> 
+	     let output = Interpreter.Stmt.eval input stmt in
+	     List.iter (fun i -> Printf.printf "%d\n" i) output
+	)
 
-let ( !! )       = (!)
-let ( !  ) x     = Var x
-let ( $  ) n     = Const n
-let ( +  ) e1 e2 = Add (e1, e2)
-let ( *  ) e1 e2 = Mul (e1, e2)
-
-let skip     = Skip
-let (:=) x e = Assign (x, e)
-let read x   = Read x
-let write x  = Write x
-let (|>) l r = Seq (l, r)
-
-(*
-read (x);
-read (y);
-z := x * x;
-write (z+y)
-*)
-
-let p =
-  read "x" |>
-  read "y" |>
-  ("z" := !"x" * !"x") |>
-  write (!"z" + !"y")
-
-(*
-let _ =
-  let [r] = run [3; 4] p in
-  Printf.printf "%d\n" r
-
-let run input p =
-  srun input (compile_stmt p)
-
-let _ =
-  let [r] = run [3; 4] p in
-  Printf.printf "%d\n" r
-*)
-*)
-
-let main =
-  let interpret_flag = ref false in
-  let filename_arg : 'string option ref = ref None in
-  let speclist =
-    [("--interpret", Arg.Set interpret_flag, "Interpret program instead of compiling")] in
-  let set_filename = (fun name ->
-      match !filename_arg with
-      | None -> filename_arg := Some name
-      | (Some _) -> raise (Arg.Bad "More than one positional argument")
-    ) in
-  let usage_str = "Usage: rc.byte [--interpret] <name.expr>" in
-  Arg.parse speclist set_filename usage_str;
-  match !filename_arg with
-  | None ->
-      Printf.eprintf "No input file specified\n";
-      exit 1;
-  | (Some file) ->
-      match Parser.parse file with
-      | `Fail err -> Printf.eprintf "%s\n" err
-      | `Ok stmt ->
-        match !interpret_flag with
-        | true ->
-            Printf.eprintf "Interpreting %s...\n%!" file;
-            let result = Expr.run [] stmt in
-              List.iter (Printf.printf "%d\n") result
-        | false ->
-            ignore @@ Expr.build stmt (Filename.chop_suffix file ".expr")
-
+    | `Fail er -> Printf.eprintf "%s" er
+  with 
+  | Invalid_argument _ -> Printf.printf "Usage: rc.byte <name.expr>"

@@ -1,117 +1,5 @@
-type binop = 
-  | Add
-  | Sub
-  | Mul
 
-let binop x =
-  match x with
-  | "+" -> Add
-  | "-" -> Sub
-  | "*" -> Mul
-
-type expr =
-  | Const of int
-  | Var   of string
-  | Binop of expr * binop * expr
-
-let rec eval state expr =
-  match expr with
-  | Const  n     -> n
-  | Var    x     -> state x
-  | Binop (l, op, r) ->
-      let lv = eval state l in
-      let rv = eval state r in
-      match op with
-      | Add -> lv + rv
-      | Sub -> lv - rv
-      | Mul -> lv * rv
-
-type stmt =
-  | Skip
-  | Read   of string
-  | Write  of expr
-  | Assign of string * expr
-  | Seq    of stmt * stmt
-
-let run input stmt =
-  let rec run' ((state, input, output) as c) stmt =
-    let state' x = List.assoc x state in
-    match stmt with
-    | Skip          -> c
-    | Seq    (l, r) -> run' (run' c l) r
-    | Assign (x, e) -> ((x, eval state' e) :: state, input, output)
-    | Write   e     -> (state, input, output @ [eval state' e])
-    | Read    x     ->
-       let y::input' = input in
-       ((x, y) :: state, input', output)
-  in
-  let (_, _, result) = run' ([], input, []) stmt in
-  result
-
-type instr =
-  | S_READ
-  | S_WRITE
-  | S_PUSH  of int
-  | S_LD    of string
-  | S_ST    of string
-  | S_ADD
-  | S_SUB
-  | S_MUL
-
-let binop_to_instr x =
-  match x with
-  | Add -> S_ADD
-  | Sub -> S_SUB
-  | Mul -> S_MUL
-
-let srun input code =
-  let rec srun' (state, stack, input, output) code =
-    match code with
-    | []       -> output
-    | i::code' ->
-       srun'
-         (match i with
-          | S_READ ->
-             let y::input' = input in
-             (state, y::stack, input', output)
-          | S_WRITE ->
-             let y::stack' = stack in
-             (state, stack', input, output @ [y])
-          | S_PUSH n ->
-             (state, n::stack, input, output)
-          | S_LD x ->
-             (state, (List.assoc x state)::stack, input, output)
-          | S_ST x ->
-             let y::stack' = stack in
-             ((x, y)::state, stack', input, output)
-          | S_ADD ->
-             let y::x::stack' = stack in
-             (state, (x+y)::stack', input, output)
-          | S_SUB ->
-             let y::x::stack' = stack in
-             (state, (x-y)::stack', input, output)
-          | S_MUL ->
-             let y::x::stack' = stack in
-             (state, (x*y)::stack', input, output)
-         )
-         code'
-  in
-  srun' ([], [], input, []) code
-
-let rec compile_expr expr =
-  match expr with
-  | Var    x     -> [S_LD   x]
-  | Const  n     -> [S_PUSH n]
-  | Binop (l, op, r) -> compile_expr l @ compile_expr r @ [binop_to_instr op]
-
-let rec compile_stmt stmt =
-  match stmt with
-  | Skip          -> []
-  | Assign (x, e) -> compile_expr e @ [S_ST x]
-  | Read    x     -> [S_READ; S_ST x]
-  | Write   e     -> compile_expr e @ [S_WRITE]
-  | Seq    (l, r) -> compile_stmt l @ compile_stmt r
-
+(*
 type opnd = R of int | S of int | M of string | L of int
 
 let x86regs = [|"%ebx"; "%ecx"; "%esi"; "%edi"; "%eax"; "%edx"|]
@@ -130,7 +18,6 @@ let allocate env stack =
 
 type x86instr =
   | X86Add  of opnd * opnd
-  | X86Sub  of opnd * opnd
   | X86Mul  of opnd * opnd
   | X86Mov  of opnd * opnd
   | X86Push of opnd
@@ -158,7 +45,6 @@ let slot : opnd -> string = function
   | (L i) -> Printf.sprintf "$%d" i
 let x86print : x86instr -> string = function
   | X86Add (s1, s2) -> Printf.sprintf "\taddl\t%s,\t%s"  (slot s1) (slot s2)
-  | X86Sub (s1, s2) -> Printf.sprintf "\tsubl\t%s,\t%s"  (slot s1) (slot s2)
   | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (slot s1) (slot s2)
   | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (slot s1) (slot s2)
   | X86Push s       -> Printf.sprintf "\tpushl\t%s"     (slot s )
@@ -194,14 +80,6 @@ let x86compile : x86env -> instr list -> x86instr list = fun env code ->
                            X86Add (eax, y)])
             | _ ->
               (y::stack', [X86Add (x, y)]))
-         | S_SUB   ->
-           let x::y::stack' = stack in
-           (match x, y with
-            | S _, S _ ->
-              (y::stack', [X86Mov (x, eax);
-                           X86Sub (eax, y)])
-            | _ ->
-              (y::stack', [X86Sub (x, y)]))
          | S_MUL   ->
            let x::y::stack' = stack in
             (match x, y with
@@ -256,3 +134,4 @@ let build stmt name =
   Printf.fprintf outf "%s" (genasm stmt);
   close_out outf;
   Sys.command (Printf.sprintf "gcc -m32 -o %s ../runtime/runtime.o %s.s" name name)
+*)

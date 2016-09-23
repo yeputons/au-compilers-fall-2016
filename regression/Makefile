@@ -1,13 +1,15 @@
 TESTS=$(sort $(patsubst %.expr,%,$(wildcard test???.expr)))
 
-.PHONY: check $(TESTS) list_tests
-check: $(TESTS)
+.PHONY: check $(TESTS)
+
+check: $(TESTS) 
 
 list_tests:
 	@echo $(TESTS)
 
-$(TESTS): %: %.expr %.input orig/%.log
-	../src/rc.byte $@.expr && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+$(TESTS): %: %.expr
+	cat $@.input | ../src/rc.byte    $< > $@.log && diff $@.log orig/$@.log
+	cat $@.input | ../src/rc.byte -s $< > $@.log && diff $@.log orig/$@.log
 
 clean:
-	rm *.log *.s *~
+	rm -f test*.log *.s *~ $(TESTS)
