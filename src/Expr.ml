@@ -55,11 +55,13 @@ type instr =
   | S_LD    of string
   | S_ST    of string
   | S_ADD
+  | S_SUB
   | S_MUL
 
 let binop_to_instr x =
   match x with
   | Add -> S_ADD
+  | Sub -> S_SUB
   | Mul -> S_MUL
 
 let srun input code =
@@ -85,6 +87,9 @@ let srun input code =
           | S_ADD ->
              let y::x::stack' = stack in
              (state, (x+y)::stack', input, output)
+          | S_SUB ->
+             let y::x::stack' = stack in
+             (state, (x-y)::stack', input, output)
           | S_MUL ->
              let y::x::stack' = stack in
              (state, (x*y)::stack', input, output)
