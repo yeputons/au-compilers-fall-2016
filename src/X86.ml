@@ -20,6 +20,23 @@ let ecx = R 3
 let esi = R 4
 let edi = R 5
 
+type byte_reg = Al | Dl
+type set_suf = E | Ne | L | G | Le | Ge
+let binop_to_set_suf op =
+  match op with
+  | "==" -> E
+  | "!=" -> Ne
+  | "<"  -> L
+  | ">"  -> G
+  | "<=" -> Le
+  | ">=" -> Ge
+let set_suf_to_string suf = match suf with
+  | E -> "e" | Ne -> "ne"
+  | L -> "l" | Le -> "le"
+  | G -> "g" | Ge -> "ge"
+let byte_reg_to_string r = match r with
+  | Al -> "al" | Dl -> "dl"
+
 type instr =
 | X86Add  of opnd * opnd
 | X86Sub  of opnd * opnd
@@ -30,13 +47,7 @@ type instr =
 | X86Mov  of opnd * opnd
 | X86Cdq
 | X86Cmp  of opnd * opnd
-| X86SeteAl
-| X86SetneAl
-| X86SetneDl
-| X86SetlAl
-| X86SetgAl
-| X86SetleAl
-| X86SetgeAl
+| X86Set  of set_suf * byte_reg
 | X86Push of opnd
 | X86Pop  of opnd
 | X86Ret
@@ -82,13 +93,7 @@ module Show =
     | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Cdq          -> Printf.sprintf "\tcdq"
     | X86Cmp (s1, s2) -> Printf.sprintf "\tcmpl\t%s,\t%s"  (opnd s1) (opnd s2)
-    | X86SeteAl       -> Printf.sprintf "\tsete\t%%al"
-    | X86SetneAl      -> Printf.sprintf "\tsetne\t%%al"
-    | X86SetneDl      -> Printf.sprintf "\tsetne\t%%dl"
-    | X86SetlAl       -> Printf.sprintf "\tsetl\t%%al"
-    | X86SetgAl       -> Printf.sprintf "\tsetg\t%%al"
-    | X86SetleAl      -> Printf.sprintf "\tsetle\t%%al"
-    | X86SetgeAl      -> Printf.sprintf "\tsetge\t%%al"
+    | X86Set (suf, r) -> Printf.sprintf "\tset%s\t%%%s" (set_suf_to_string suf) (byte_reg_to_string r)
     | X86Push s       -> Printf.sprintf "\tpushl\t%s"      (opnd s )
     | X86Pop  s       -> Printf.sprintf "\tpopl\t%s"       (opnd s )
     | X86Ret          -> "\tret"
@@ -157,24 +162,17 @@ module Compile =
                       | _ -> [
                         X86Mov (L 0, eax);
                         X86Cmp (y', x);
-                        (match op with
-                        | "==" -> X86SeteAl
-                        | "!=" -> X86SetneAl
-                        | "<"  -> X86SetlAl
-                        | ">"  -> X86SetgAl
-                        | "<=" -> X86SetleAl
-                        | ">=" -> X86SetgeAl
-                        );
+                        X86Set (binop_to_set_suf op, Al);
                         X86Mov (eax, x)
                       ]
                       ))
                   | "&&" | "!!" -> (x::stack', [
                     X86Mov (L 0, eax);
                     X86Cmp (L 0, x);
-                    X86SetneAl;
+                    X86Set (Ne, Al);
                     X86Mov (L 0, edx);
                     X86Cmp (L 0, y);
-                    X86SetneDl;
+                    X86Set (Ne, Dl);
                     if op = "&&" then X86And (edx, eax) else X86Or (edx, eax);
                     X86Mov (eax, x);
                   ])
