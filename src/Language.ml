@@ -74,6 +74,7 @@ module Stmt =
     | Read   of string
     | Write  of Expr.t
     | Assign of string * Expr.t
+    | If     of Expr.t * t * t
     | Seq    of t * t
 
     ostap (
@@ -85,6 +86,13 @@ module Stmt =
       | %"read"  "(" x:IDENT ")"         {Read x}
       | %"write" "(" e:!(Expr.parse) ")" {Write e}
       | %"skip"                          {Skip}
+      | %"if" cond:!(Expr.parse)
+         "then" t:parse
+         "else" f:parse
+         "fi" {If (cond, t, f) }
+      | %"if" cond:!(Expr.parse)
+         "then" t:parse
+         "fi" {If (cond, t, Skip) }
     )
 
   end
