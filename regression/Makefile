@@ -1,4 +1,4 @@
-TESTS=$(sort $(patsubst %.expr,%,$(wildcard test???.expr)))
+TESTS=$(sort $(patsubst %.expr,%,$(wildcard test???.expr testy???.expr)))
 
 .PHONY: check $(TESTS)
 
@@ -13,4 +13,4 @@ $(TESTS): %: %.expr
 	../src/rc.byte -o $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 
 clean:
-	rm -f test*.log *.s *~ $(TESTS)
+	rm -f $(TESTS) *.log *.s
