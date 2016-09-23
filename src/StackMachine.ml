@@ -31,8 +31,8 @@ module Interpreter =
 		  let y::stack' = stack in
       ((x, y)::state, stack', input, output)
               | S_BINOP s ->
-      let x::y::stack' = stack in
-      (state, (eval_binop s x y)::stack', input, output)
+      let r::l::stack' = stack in
+      (state, (eval_binop s l r)::stack', input, output)
               )
               code'
       in
@@ -49,7 +49,7 @@ module Compile =
     let rec expr = function
     | Var   x -> [S_LD   x]
     | Const n -> [S_PUSH n]
-    | Binop (s, x, y) -> expr y @ expr x @ [S_BINOP s]
+    | Binop (s, x, y) -> expr x @ expr y @ [S_BINOP s]
 
     let rec stmt = function
     | Skip          -> []
