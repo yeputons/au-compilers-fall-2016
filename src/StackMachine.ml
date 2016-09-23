@@ -29,10 +29,10 @@ module Interpreter =
                   (state, (List.assoc x state)::stack, input, output)
               | S_ST x ->
                   let y::stack' = stack in
-      ((x, y)::state, stack', input, output)
+                  ((x, y)::state, stack', input, output)
               | S_BINOP s ->
-      let r::l::stack' = stack in
-      (state, (eval_binop s l r)::stack', input, output)
+                  let r::l::stack' = stack in
+                  (state, (eval_binop s l r)::stack', input, output)
               )
               code'
       in
