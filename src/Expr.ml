@@ -2,6 +2,7 @@ type expr =
   | Const of int
   | Var   of string
   | Add   of expr * expr
+  | Sub   of expr * expr
   | Mul   of expr * expr
 
 let rec eval state expr =
@@ -9,6 +10,7 @@ let rec eval state expr =
   | Const  n     -> n
   | Var    x     -> state x
   | Add   (l, r) -> eval state l + eval state r
+  | Sub   (l, r) -> eval state l - eval state r
   | Mul   (l, r) -> eval state l * eval state r
 
 type stmt =

@@ -6,7 +6,12 @@ ostap (
     expr: addi;
 
     addi:
-      l:multi  suf:("+" r:multi)*  { List.fold_left (fun l (op, r) -> Add (l, r)) l suf };
+      l:multi suf:(("+"|"-") r:multi)*  {
+        List.fold_left (fun l (op, r) ->
+          match Token.repr op with
+          | "+" -> Add (l, r)
+          | "-" -> Sub (l, r)
+          ) l suf };
 
     multi:
       l:primary "*" r:multi { Mul (l, r) }
