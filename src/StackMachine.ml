@@ -14,10 +14,11 @@ module Interpreter =
     open Language.Expr
 
     let run input code =
-      let rec run' (state, stack, input, output) code =
-        match code with
-        | []       -> output
-        | i::code' ->
+      let rec run' (state, stack, input, output) iptr =
+        if iptr >= Array.length code then
+          output
+        else
+          let i = code.(iptr) in
             run'
               (match i with
               | S_READ ->
@@ -37,9 +38,9 @@ module Interpreter =
                   let r::l::stack' = stack in
                   (state, (eval_binop s l r)::stack', input, output)
               )
-              code'
+              (iptr + 1)
       in
-      run' ([], [], input, []) code
+      run' ([], [], input, []) 0
   end
 
 module Compile =
@@ -49,15 +50,14 @@ module Compile =
     open Language.Stmt
 
     let rec expr = function
-    | Var   x -> [S_LD   x]
-    | Const n -> [S_PUSH n]
-    | Binop (s, x, y) -> expr x @ expr y @ [S_BINOP s]
+    | Var   x -> [|S_LD   x|]
+    | Const n -> [|S_PUSH n|]
+    | Binop (s, x, y) -> Array.concat [expr x; expr y; [|S_BINOP s|]]
 
     let rec stmt = function
-    | Skip          -> []
-    | Assign (x, e) -> expr e @ [S_ST x]
-    | Read    x     -> [S_READ; S_ST x]
-    | Write   e     -> expr e @ [S_WRITE]
-    | Seq    (l, r) -> stmt l @ stmt r
-
+    | Skip          -> [||]
+    | Assign (x, e) -> Array.append (expr e) [|S_ST x|]
+    | Read    x     -> [|S_READ; S_ST x|]
+    | Write   e     -> Array.append (expr e) [|S_WRITE|]
+    | Seq    (l, r) -> Array.append (stmt l) (stmt r)
   end
