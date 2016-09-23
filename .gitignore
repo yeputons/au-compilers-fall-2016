@@ -1,5 +1,4 @@
 Makefile
-Makefile.in
 *.log
 config.status
 *cache
@@ -17,4 +16,3 @@ META
 *~
 *.swp
 configure
-aclocal.m4
