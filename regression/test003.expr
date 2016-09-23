@@ -1,25 +1,5 @@
-read (x1);
-read (x2);
-read (x3);
-read (x4);
-read (x5);
-read (x6);
-read (x7);
-read (x8);
-read (x9);
-read (x10);
-read (x11);
-read (x12);
-write (x1 + (x2 + (x3 + (x4 + (x5 + (x6 + (x7 + (x8 + (x9 + (x10 + (x11 + x12))))))))))
-     + x1 + (x2 + (x3 + (x4 + (x5 + (x6 + (x7 + (x8 + (x9 + (x10 + (x11 + x12)))))))))));
-write (x2);
-write (x3);
-write (x4);
-write (x5);
-write (x6);
-write (x7);
-write (x8);
-write (x9);
-write (x10);
-write (x11);
-write (x12)
+read (x);
+read (y);
+write (x-y);
+write (x/y);
+write (x%y)
