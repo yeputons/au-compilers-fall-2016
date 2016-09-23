@@ -12,23 +12,23 @@ module Interpreter =
 
     let run input code =
       let rec run' (state, stack, input, output) code =
-	match code with
-	| []       -> output
-	| i::code' ->
-	    run'
+        match code with
+        | []       -> output
+        | i::code' ->
+            run'
               (match i with
               | S_READ ->
-		  let y::input' = input in
-		  (state, y::stack, input', output)
+                  let y::input' = input in
+                  (state, y::stack, input', output)
               | S_WRITE ->
-		  let y::stack' = stack in
-		  (state, stack', input, output @ [y])
+                  let y::stack' = stack in
+                  (state, stack', input, output @ [y])
               | S_PUSH n ->
-		  (state, n::stack, input, output)
+                  (state, n::stack, input, output)
               | S_LD x ->
-		  (state, (List.assoc x state)::stack, input, output)
+                  (state, (List.assoc x state)::stack, input, output)
               | S_ST x ->
-		  let y::stack' = stack in
+                  let y::stack' = stack in
       ((x, y)::state, stack', input, output)
               | S_BINOP s ->
       let r::l::stack' = stack in
@@ -37,7 +37,6 @@ module Interpreter =
               code'
       in
       run' ([], [], input, []) code
-	
   end
 
 module Compile =

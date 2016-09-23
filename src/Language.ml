@@ -78,7 +78,7 @@ module Stmt =
 
     ostap (
       parse: s:simple d:(-";" parse)? {
-	match d with None -> s | Some d -> Seq (s, d)
+        match d with None -> s | Some d -> Seq (s, d)
       };
       simple:
         x:IDENT ":=" e:!(Expr.parse)     {Assign (x, e)}

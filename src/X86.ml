@@ -102,10 +102,10 @@ module Compile =
 
     let stack_program env code =
       let rec compile stack code =
-	match code with
-	| []       -> []
-	| i::code' ->
-	    let (stack', x86code) =
+        match code with
+        | []       -> []
+        | i::code' ->
+            let (stack', x86code) =
               match i with
               | S_READ   ->
                   let s = allocate env stack in
@@ -133,7 +133,7 @@ module Compile =
                   | R _ -> [X86Mov (s, M x)]
                   | _   -> [X86Mov (s, eax); X86Mov (eax, M x)]
                   )
-	            | S_BINOP op ->
+                    | S_BINOP op ->
                   let y::x::stack' = stack in
                   (match op with
                   | "+" | "-" | "*" | "<=" | ">=" | "<" | ">" | "==" | "!=" ->
@@ -180,8 +180,8 @@ module Compile =
                         X86Div y;
                         X86Mov ((if op = "/" then eax else edx), x)])
                   )
-	    in
-	    x86code @ compile stack' code'
+            in
+            x86code @ compile stack' code'
       in
       compile [] code
 
