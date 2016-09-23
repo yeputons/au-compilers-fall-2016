@@ -8,13 +8,10 @@ ostap (
     addi:
       l:multi suf:(("+"|"-") r:multi)*  {
         List.fold_left (fun l (op, r) ->
-          match Token.repr op with
-          | "+" -> Add (l, r)
-          | "-" -> Sub (l, r)
-          ) l suf };
+          Binop (l, binop (Token.repr op), r)) l suf };
 
     multi:
-      l:primary "*" r:multi { Mul (l, r) }
+      l:primary "*" r:multi { Binop (l, Mul, r) }
     | primary;
 
     primary:

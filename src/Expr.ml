@@ -1,17 +1,30 @@
+type binop = 
+  | Add
+  | Sub
+  | Mul
+
+let binop x =
+  match x with
+  | "+" -> Add
+  | "-" -> Sub
+  | "*" -> Mul
+
 type expr =
   | Const of int
   | Var   of string
-  | Add   of expr * expr
-  | Sub   of expr * expr
-  | Mul   of expr * expr
+  | Binop of expr * binop * expr
 
 let rec eval state expr =
   match expr with
   | Const  n     -> n
   | Var    x     -> state x
-  | Add   (l, r) -> eval state l + eval state r
-  | Sub   (l, r) -> eval state l - eval state r
-  | Mul   (l, r) -> eval state l * eval state r
+  | Binop (l, op, r) ->
+      let lv = eval state l in
+      let rv = eval state r in
+      match op with
+      | Add -> lv + rv
+      | Sub -> lv - rv
+      | Mul -> lv * rv
 
 type stmt =
   | Skip
@@ -43,6 +56,11 @@ type instr =
   | S_ST    of string
   | S_ADD
   | S_MUL
+
+let binop_to_instr x =
+  match x with
+  | Add -> S_ADD
+  | Mul -> S_MUL
 
 let srun input code =
   let rec srun' (state, stack, input, output) code =
@@ -79,8 +97,7 @@ let rec compile_expr expr =
   match expr with
   | Var    x     -> [S_LD   x]
   | Const  n     -> [S_PUSH n]
-  | Add   (l, r) -> compile_expr l @ compile_expr r @ [S_ADD]
-  | Mul   (l, r) -> compile_expr l @ compile_expr r @ [S_MUL]
+  | Binop (l, op, r) -> compile_expr l @ compile_expr r @ [binop_to_instr op]
 
 let rec compile_stmt stmt =
   match stmt with
