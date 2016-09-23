@@ -1,4 +1,4 @@
-TESTS=$(sort $(patsubst %.expr,%,$(wildcard test???.expr testy???.expr)))
+TESTS=$(sort $(basename $(wildcard test???.expr testy???.expr)))
 
 .PHONY: check $(TESTS)
 
