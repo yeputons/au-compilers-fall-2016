@@ -26,8 +26,22 @@ module Expr =
       | "!!" -> if (x <> 0) || (y <> 0) then 1 else 0
 
     ostap (
-      parse:
-        l:addi suf:(("<=" | "<" | "==" | "!=" | ">=" | ">" | "&&" | "!!") addi)* {
+      parse: ori;
+
+      ori:
+        l:andi suf:("!!" andi)* {
+          List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
+        }
+      | andi;
+
+      andi:
+        l:cmpi suf:("&&" cmpi)* {
+          List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
+        }
+      | cmpi;
+
+      cmpi:
+        l:addi suf:(("<=" | "<" | "==" | "!=" | ">=" | ">") addi)* {
            List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
         }
       | addi;
