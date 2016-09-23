@@ -8,6 +8,7 @@ type i =
 
 module Interpreter =
   struct
+    open Language.Expr
 
     let run input code =
       let rec run' (state, stack, input, output) code =
@@ -28,9 +29,10 @@ module Interpreter =
 		  (state, (List.assoc x state)::stack, input, output)
               | S_ST x ->
 		  let y::stack' = stack in
-		  ((x, y)::state, stack', input, output)
+      ((x, y)::state, stack', input, output)
               | S_BINOP s ->
-		  failwith "stack machine: binop"
+      let x::y::stack' = stack in
+      (state, (eval_binop s x y)::stack', input, output)
               )
               code'
       in
@@ -47,7 +49,7 @@ module Compile =
     let rec expr = function
     | Var   x -> [S_LD   x]
     | Const n -> [S_PUSH n]
-    | Binop (s, x, y) -> failwith "stack machine compiler: binop"
+    | Binop (s, x, y) -> expr y @ expr x @ [S_BINOP s]
 
     let rec stmt = function
     | Skip          -> []

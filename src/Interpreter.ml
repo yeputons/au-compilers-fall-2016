@@ -6,7 +6,10 @@ module Expr =
     let rec eval state = function
     | Const  n -> n
     | Var    x -> state x
-    | Binop  _ -> failwith "not supported"
+    | Binop  (op, l, r) ->
+        let lv = eval state l in
+        let rv = eval state r in
+        eval_binop op lv rv
  
   end
   
