@@ -21,6 +21,7 @@ let edi = R 5
 
 type instr =
 | X86Add  of opnd * opnd
+| X86Sub  of opnd * opnd
 | X86Mul  of opnd * opnd
 | X86Mov  of opnd * opnd
 | X86Push of opnd
@@ -59,6 +60,7 @@ module Show =
 
     let instr = function
     | X86Add (s1, s2) -> Printf.sprintf "\taddl\t%s,\t%s"  (opnd s1) (opnd s2)
+    | X86Sub (s1, s2) -> Printf.sprintf "\tsubl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (opnd s1) (opnd s2)
     | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Push s       -> Printf.sprintf "\tpushl\t%s"      (opnd s )
@@ -101,8 +103,23 @@ module Compile =
                   env#local x;
                   let s::stack' = stack in
                   (stack', [X86Mov (s, M x)])
-	            | S_BINOP _ ->
-                  failwith "x86 binop"
+	            | S_BINOP op ->
+                  let x::y::stack' = stack in
+                  (match op with
+                  | "+" | "-" | "*" ->
+                      let preload, x' = (
+                        match x, y with
+                        | R _, _ | _, R _ ->
+                            ([], x)
+                        | _ ->
+                            ([X86Mov (x, eax)], eax)
+                      ) in
+                      (match op with
+                      | "+" -> (y::stack', preload @ [X86Add (x', y)])
+                      | "-" -> (y::stack', preload @ [X86Sub (x', y)])
+                      | "*" -> (y::stack', preload @ [X86Mul (x', y)])
+                      )
+                  )
 (*
               | S_ADD   ->
 		  let x::y::stack' = stack in
