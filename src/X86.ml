@@ -83,17 +83,18 @@ module Compile =
               | S_READ   -> ([eax], [X86Call "read"])
               | S_WRITE  -> ([], [X86Push (R 0); X86Call "write"; X86Pop (R 0)])
               | S_PUSH n ->
-		  let s = allocate env stack in
-		  (s::stack, [X86Mov (L n, s)])
+                  let s = allocate env stack in
+                  (s::stack, [X86Mov (L n, s)])
               | S_LD x   ->
-		  env#local x;
-		  let s = allocate env stack in
-		  (s::stack, [X86Mov (M x, s)])
+                  env#local x;
+                  let s = allocate env stack in
+                  (s::stack, [X86Mov (M x, s)])
               | S_ST x   ->
-		  env#local x;
-		  let s::stack' = stack in
-		  (stack', [X86Mov (s, M x)])
-	      | S_BINOP _ -> failwith "x86 binop"
+                  env#local x;
+                  let s::stack' = stack in
+                  (stack', [X86Mov (s, M x)])
+	            | S_BINOP _ ->
+                  failwith "x86 binop"
 (*
               | S_ADD   ->
 		  let x::y::stack' = stack in
