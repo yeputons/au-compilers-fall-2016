@@ -24,6 +24,7 @@ type instr =
 | X86Add  of opnd * opnd
 | X86Sub  of opnd * opnd
 | X86Mul  of opnd * opnd
+| X86Div  of opnd
 | X86Mov  of opnd * opnd
 | X86Push of opnd
 | X86Pop  of opnd
@@ -63,6 +64,7 @@ module Show =
     | X86Add (s1, s2) -> Printf.sprintf "\taddl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Sub (s1, s2) -> Printf.sprintf "\tsubl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (opnd s1) (opnd s2)
+    | X86Div s2       -> Printf.sprintf "\tidivl\t%s"      (opnd s2)
     | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Push s       -> Printf.sprintf "\tpushl\t%s"      (opnd s )
     | X86Pop  s       -> Printf.sprintf "\tpopl\t%s"       (opnd s )
@@ -110,21 +112,27 @@ module Compile =
                   | _   -> [X86Mov (s, eax); X86Mov (eax, M x)]
                   )
 	            | S_BINOP op ->
-                  let x::y::stack' = stack in
+                  let y::x::stack' = stack in
                   (match op with
                   | "+" | "-" | "*" ->
-                      let preload, x' = (
+                      let preload, y' = (
                         match x, y with
                         | R _, _ | _, R _ ->
-                            ([], x)
+                            ([], y)
                         | _ ->
-                            ([X86Mov (x, eax)], eax)
+                            ([X86Mov (y, eax)], eax)
                       ) in
                       (match op with
-                      | "+" -> (y::stack', preload @ [X86Add (x', y)])
-                      | "-" -> (y::stack', preload @ [X86Sub (x', y)])
-                      | "*" -> (y::stack', preload @ [X86Mul (x', y)])
+                      | "+" -> (x::stack', preload @ [X86Add (y', x)])
+                      | "-" -> (x::stack', preload @ [X86Sub (y', x)])
+                      | "*" -> (x::stack', preload @ [X86Mul (y', x)])
                       )
+                  | "/" | "%" ->
+                      (x::stack', [
+                        X86Mov (L 0, edx);
+                        X86Mov (x, eax);
+                        X86Div y;
+                        X86Mov ((if op = "/" then eax else edx), x)])
                   )
 (*
               | S_ADD   ->
