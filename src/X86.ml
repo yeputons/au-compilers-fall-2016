@@ -80,8 +80,16 @@ module Compile =
 	| i::code' ->
 	    let (stack', x86code) =
               match i with
-              | S_READ   -> ([eax], [X86Call "read"])
-              | S_WRITE  -> ([], [X86Push (R 0); X86Call "write"; X86Pop (R 0)])
+              | S_READ   ->
+                  assert (List.length stack == 0);
+                  ([eax], [X86Call "read"])
+              | S_WRITE  ->
+                  (match stack with
+                  | [R 0] -> ()
+                  | [] -> failwith "Stack on S_WRITE operation is empty"
+                  | _ -> failwith "Stack on S_WRITE operation contains more than one item"
+                  );
+                  ([], [X86Push (R 0); X86Call "write"; X86Pop (R 0)])
               | S_PUSH n ->
                   let s = allocate env stack in
                   (s::stack, [X86Mov (L n, s)])
