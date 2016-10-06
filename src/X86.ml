@@ -2,20 +2,21 @@ type opnd = R of int | S of int | M of string | L of int
 
 let x86regs = [|
   "%eax"; 
+  "%edx";
   "%ebx"; 
   "%ecx"; 
-  "%edx"; 
   "%esi"; 
   "%edi"
 |]
 
 let num_of_regs = Array.length x86regs
+let first_free_reg = 2
 let word_size = 4
 
 let eax = R 0
-let ebx = R 1
-let ecx = R 2
-let edx = R 3
+let edx = R 1
+let ebx = R 2
+let ecx = R 3
 let esi = R 4
 let edi = R 5
 
@@ -44,7 +45,7 @@ class x86env =
 
 let allocate env stack =
   match stack with
-  | []                              -> R 0
+  | []                              -> R first_free_reg
   | (S n)::_                        -> env#allocate (n+1); S (n+1)
   | (R n)::_ when n < num_of_regs-1 -> R (n+1)
   | _                               -> S 0
@@ -83,26 +84,31 @@ module Compile =
 	    let (stack', x86code) =
               match i with
               | S_READ   ->
-                  assert (List.length stack == 0);
-                  ([eax], [X86Call "read"])
+                  let s = allocate env stack in
+                  (s::stack, [X86Call "read"; X86Mov (eax, s)])
               | S_WRITE  ->
-                  (match stack with
-                  | [R 0] -> ()
-                  | [] -> failwith "Stack on S_WRITE operation is empty"
-                  | _ -> failwith "Stack on S_WRITE operation contains more than one item"
-                  );
-                  ([], [X86Push (R 0); X86Call "write"; X86Pop (R 0)])
+                  let s::stack' = stack in
+                  (stack', match s with
+                  | S 0 -> [X86Call "write"]
+                  | _   -> [X86Push s; X86Call "write"; X86Pop eax]
+                  )
               | S_PUSH n ->
                   let s = allocate env stack in
                   (s::stack, [X86Mov (L n, s)])
               | S_LD x   ->
                   env#local x;
                   let s = allocate env stack in
-                  (s::stack, [X86Mov (M x, s)])
+                  (s::stack, match s with
+                  | R _ -> [X86Mov (M x, s)]
+                  | _   -> [X86Mov (M x, eax); X86Mov (eax, s)]
+                  )
               | S_ST x   ->
                   env#local x;
                   let s::stack' = stack in
-                  (stack', [X86Mov (s, M x)])
+                  (stack', match s with
+                  | R _ -> [X86Mov (s, M x)]
+                  | _   -> [X86Mov (s, eax); X86Mov (eax, M x)]
+                  )
 	            | S_BINOP op ->
                   let x::y::stack' = stack in
                   (match op with
