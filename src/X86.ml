@@ -122,11 +122,12 @@ module Compile =
                         | _ ->
                             ([X86Mov (y, eax)], eax)
                       ) in
+                      (x::stack', preload @
                       (match op with
-                      | "+" -> (x::stack', preload @ [X86Add (y', x)])
-                      | "-" -> (x::stack', preload @ [X86Sub (y', x)])
-                      | "*" -> (x::stack', preload @ [X86Mul (y', x)])
-                      )
+                      | "+" -> [X86Add (y', x)]
+                      | "-" -> [X86Sub (y', x)]
+                      | "*" -> [X86Mul (y', x)]
+                      ))
                   | "/" | "%" ->
                       (x::stack', [
                         X86Mov (L 0, edx);
