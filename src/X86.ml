@@ -26,6 +26,7 @@ type instr =
 | X86Mul  of opnd * opnd
 | X86Div  of opnd
 | X86Mov  of opnd * opnd
+| X86Cdq
 | X86Cmp  of opnd * opnd
 | X86SeteAl
 | X86SetneAl
@@ -73,6 +74,7 @@ module Show =
     | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (opnd s1) (opnd s2)
     | X86Div s2       -> Printf.sprintf "\tidivl\t%s"      (opnd s2)
     | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (opnd s1) (opnd s2)
+    | X86Cdq          -> Printf.sprintf "\tcdq"
     | X86Cmp (s1, s2) -> Printf.sprintf "\tcmpl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86SeteAl       -> Printf.sprintf "\tsete\t%%al"
     | X86SetneAl      -> Printf.sprintf "\tsetne\t%%al"
@@ -157,8 +159,8 @@ module Compile =
                       ))
                   | "/" | "%" ->
                       (x::stack', [
-                        X86Mov (L 0, edx);
                         X86Mov (x, eax);
+                        X86Cdq;
                         X86Div y;
                         X86Mov ((if op = "/" then eax else edx), x)])
                   )
