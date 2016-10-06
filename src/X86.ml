@@ -225,6 +225,9 @@ let build stmt name =
   let outf = open_out (Printf.sprintf "%s.s" name) in
   Printf.fprintf outf "%s" (compile stmt);
   close_out outf;
-  match Sys.command (Printf.sprintf "gcc -m32 -o %s ../runtime/runtime.o %s.s" name name) with
+  let rc_runtime =
+    (try Sys.getenv "RC_RUNTIME" with
+    | Not_found -> "../runtime/runtime.o") in
+  match Sys.command (Printf.sprintf "gcc -m32 -o %s %s %s.s" name rc_runtime name) with
   | 0 -> ()
   | _ -> failwith "gcc returned non-zero code"
