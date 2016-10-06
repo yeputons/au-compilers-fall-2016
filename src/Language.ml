@@ -22,10 +22,12 @@ module Expr =
       | ">"  -> if x >  y then 1 else 0
       | "==" -> if x =  y then 1 else 0
       | "!=" -> if x <> y then 1 else 0
+      | "&&" -> if (x <> 0) && (y <> 0) then 1 else 0
+      | "!!" -> if (x <> 0) || (y <> 0) then 1 else 0
 
     ostap (
       parse:
-        l:addi suf:(("<=" | "<" | "==" | "!=" | ">=" | ">") addi)* {
+        l:addi suf:(("<=" | "<" | "==" | "!=" | ">=" | ">" | "&&" | "!!") addi)* {
            List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
         }
       | addi;
