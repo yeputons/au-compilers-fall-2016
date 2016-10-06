@@ -162,25 +162,6 @@ module Compile =
                         X86Div y;
                         X86Mov ((if op = "/" then eax else edx), x)])
                   )
-(*
-              | S_ADD   ->
-		  let x::y::stack' = stack in
-		  (match x, y with
-		  | S _, S _ ->
-		      (y::stack', [X86Mov (x, eax);
-				   X86Add (eax, y)])
-		  | _ ->
-		      (y::stack', [X86Add (x, y)]))
-              | S_MUL   ->
-		  let x::y::stack' = stack in
-		  (match x, y with
-		  | S _, S _ ->
-		      (y::stack', [X86Mov (y, eax);
-				   X86Mul (x, eax);
-				   X86Mov (eax, y)])
-		  | _ ->
-		      (y::stack', [X86Mul (x, y)]))
-*)
 	    in
 	    x86code @ compile stack' code'
       in
