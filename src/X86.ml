@@ -26,6 +26,13 @@ type instr =
 | X86Mul  of opnd * opnd
 | X86Div  of opnd
 | X86Mov  of opnd * opnd
+| X86Cmp  of opnd * opnd
+| X86SeteAl
+| X86SetneAl
+| X86SetlAl
+| X86SetgAl
+| X86SetleAl
+| X86SetgeAl
 | X86Push of opnd
 | X86Pop  of opnd
 | X86Ret
@@ -66,6 +73,13 @@ module Show =
     | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (opnd s1) (opnd s2)
     | X86Div s2       -> Printf.sprintf "\tidivl\t%s"      (opnd s2)
     | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (opnd s1) (opnd s2)
+    | X86Cmp (s1, s2) -> Printf.sprintf "\tcmpl\t%s,\t%s"  (opnd s1) (opnd s2)
+    | X86SeteAl       -> Printf.sprintf "\tsete\t%%al"
+    | X86SetneAl      -> Printf.sprintf "\tsetne\t%%al"
+    | X86SetlAl       -> Printf.sprintf "\tsetl\t%%al"
+    | X86SetgAl       -> Printf.sprintf "\tsetg\t%%al"
+    | X86SetleAl      -> Printf.sprintf "\tsetle\t%%al"
+    | X86SetgeAl      -> Printf.sprintf "\tsetge\t%%al"
     | X86Push s       -> Printf.sprintf "\tpushl\t%s"      (opnd s )
     | X86Pop  s       -> Printf.sprintf "\tpopl\t%s"       (opnd s )
     | X86Ret          -> "\tret"
@@ -114,7 +128,7 @@ module Compile =
 	            | S_BINOP op ->
                   let y::x::stack' = stack in
                   (match op with
-                  | "+" | "-" | "*" ->
+                  | "+" | "-" | "*" | "<=" | ">=" | "<" | ">" | "==" | "!=" ->
                       let preload, y' = (
                         match x, y with
                         | R _, _ | _, R _ ->
@@ -127,6 +141,19 @@ module Compile =
                       | "+" -> [X86Add (y', x)]
                       | "-" -> [X86Sub (y', x)]
                       | "*" -> [X86Mul (y', x)]
+                      | _ -> [
+                        X86Mov (L 0, eax);
+                        X86Cmp (y', x);
+                        (match op with
+                        | "==" -> X86SeteAl
+                        | "!=" -> X86SetneAl
+                        | "<"  -> X86SetlAl
+                        | ">"  -> X86SetgAl
+                        | "<=" -> X86SetleAl
+                        | ">=" -> X86SetgeAl
+                        );
+                        X86Mov (eax, x)
+                      ]
                       ))
                   | "/" | "%" ->
                       (x::stack', [
