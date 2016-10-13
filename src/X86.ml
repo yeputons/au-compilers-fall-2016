@@ -50,9 +50,9 @@ class x86env =
     method local x    = local_vars := S.add x !local_vars
     method local_vars = S.elements !local_vars
 
-    val    allocated  = ref 0
-    method allocate n = allocated := max n !allocated
-    method allocated  = !allocated
+    val    last_allocated  = ref 0
+    method allocate n = last_allocated := max n !last_allocated
+    method cnt_allocated  = 1 + !last_allocated
   end
 
 let allocate env stack =
@@ -202,13 +202,13 @@ let compile stmt =
     env#local_vars;
   !"\t.globl\tmain";
   let prologue, epilogue =
-    if env#allocated = 0
+    if env#cnt_allocated = 0
     then (fun () -> ()), (fun () -> ())
     else
       (fun () ->
          !"\tpushl\t%ebp";
          !"\tmovl\t%esp,\t%ebp";
-         !(Printf.sprintf "\tsubl\t$%d,\t%%esp" (env#allocated * word_size))
+         !(Printf.sprintf "\tsubl\t$%d,\t%%esp" (env#cnt_allocated * word_size))
       ),
       (fun () ->
          !"\tmovl\t%ebp,\t%esp";
