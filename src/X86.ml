@@ -144,7 +144,7 @@ module Compile =
                         | R _, _ | _, R _ ->
                             ([], y)
                         | _ ->
-                            ([X86Mov (y, eax)], eax)
+                            ([X86Mov (y, edx)], edx)
                       ) in
                       (x::stack', preload @
                       (match op with
