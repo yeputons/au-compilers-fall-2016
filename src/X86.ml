@@ -133,7 +133,7 @@ module Compile =
                   | R _ -> [X86Mov (s, M x)]
                   | _   -> [X86Mov (s, eax); X86Mov (eax, M x)]
                   )
-                    | S_BINOP op ->
+              | S_BINOP op ->
                   let y::x::stack' = stack in
                   (match op with
                   | "+" | "-" | "*" | "<=" | ">=" | "<" | ">" | "==" | "!=" ->
@@ -148,7 +148,10 @@ module Compile =
                       (match op with
                       | "+" -> [X86Add (y', x)]
                       | "-" -> [X86Sub (y', x)]
-                      | "*" -> [X86Mul (y', x)]
+                      | "*" -> (match x, y' with
+                        | R _, _ -> [X86Mul (y', x)]
+                        | _, R _ -> [X86Mul (x, y'); X86Mov (y', x)]
+                        )
                       | _ -> [
                         X86Mov (L 0, eax);
                         X86Cmp (y', x);
