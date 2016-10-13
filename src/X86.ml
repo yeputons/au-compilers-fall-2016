@@ -168,11 +168,11 @@ module Compile =
                       ))
                   | "&&" | "!!" -> (x::stack', [
                     X86Mov (L 0, eax);
-                    X86Mov (L 0, edx);
-                    X86Cmp (eax, x);
-                    X86SetneDl;
-                    X86Cmp (eax, y);
+                    X86Cmp (L 0, x);
                     X86SetneAl;
+                    X86Mov (L 0, edx);
+                    X86Cmp (L 0, y);
+                    X86SetneDl;
                     if op = "&&" then X86And (edx, eax) else X86Or (edx, eax);
                     X86Mov (eax, x);
                   ])
