@@ -41,6 +41,7 @@ type instr =
 | X86Pop  of opnd
 | X86Ret
 | X86Call of string
+| X86Comm of string
 
 module S = Set.Make (String)
 
@@ -92,6 +93,7 @@ module Show =
     | X86Pop  s       -> Printf.sprintf "\tpopl\t%s"       (opnd s )
     | X86Ret          -> "\tret"
     | X86Call p       -> Printf.sprintf "\tcall\t%s" p
+    | X86Comm s       -> Printf.sprintf "// %s" s
 
   end
 
@@ -184,7 +186,7 @@ module Compile =
                         X86Mov ((if op = "/" then eax else edx), x)])
                   )
             in
-            x86code @ compile stack' code'
+            [X86Comm (StackMachine.i_to_string i)] @ x86code @ compile stack' code'
       in
       compile [] code
 
