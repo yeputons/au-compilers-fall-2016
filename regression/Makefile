@@ -15,10 +15,9 @@ list_tests:
 	@echo $(TESTS_INTERPRET)
 
 $(TESTS): %: %.expr
-	cat $@.input | ../rc.native    $< > $@.log && diff $@.log orig/$@.log
+	cat $@.input | ../rc.native -i $< > $@.log && diff $@.log orig/$@.log
 	cat $@.input | ../rc.native -s $< > $@.log && diff $@.log orig/$@.log
-	../rc.native     $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
-	../rc.native -so $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+	../rc.native -o  $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 
 $(TESTS_INTERPRET): %: %.expr
 	cat $@.input | ../rc.native    $< > $@.log && diff $@.log orig/$@.log
