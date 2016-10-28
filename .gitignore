@@ -12,6 +12,7 @@ config.status
 *.a
 *.o
 *.byte
+*.native
 META
 .depend
 *~
