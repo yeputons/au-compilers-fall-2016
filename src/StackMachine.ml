@@ -17,51 +17,53 @@ module Interpreter =
 struct
   open Language.Expr
 
-  let run input code =
+  let run reader writer code =
     let labels =
       List.concat
         (List.mapi
            (function i -> function (S_LABEL x) -> [(x, i)] | _ -> [])
            (Array.to_list code))
     in
-    let rec run' (state, stack, input, output) iptr =
+    let rec run' (state, stack) iptr =
       if iptr >= Array.length code then
-        output
+        (state, stack)
       else
         match code.(iptr) with
-        | S_JMP lbl -> run' (state, stack, input, output) (List.assoc lbl labels)
+        | S_JMP lbl -> run' (state, stack) (List.assoc lbl labels)
         | S_JZ lbl ->
           let x::stack' = stack in
           let iptr' =
             if (x = 0)
             then (List.assoc lbl labels)
             else (iptr + 1) in
-          run' (state, stack', input, output) iptr'
+          run' (state, stack') iptr'
         | _ ->
         run'
           (match code.(iptr) with
            | S_READ ->
-             let y::input' = input in
-             (state, y::stack, input', output)
+             let y = reader () in
+             (state, y::stack)
            | S_WRITE ->
              let y::stack' = stack in
-             (state, stack', input, output @ [y])
+             writer y;
+             (state, stack')
            | S_PUSH n ->
-             (state, n::stack, input, output)
+             (state, n::stack)
            | S_LD x ->
-             (state, (List.assoc x state)::stack, input, output)
+             (state, (List.assoc x state)::stack)
            | S_ST x ->
              let y::stack' = stack in
-             ((x, y)::state, stack', input, output)
+             ((x, y)::state, stack')
            | S_BINOP s ->
              let r::l::stack' = stack in
-             (state, (eval_binop s l r)::stack', input, output)
+             (state, (eval_binop s l r)::stack')
            | S_LABEL s ->
-             (state, stack, input, output)
+             (state, stack)
           )
           (iptr + 1)
     in
-    run' ([], [], input, []) 0
+    run' ([], []) 0;
+    ()
 end
 
 module Compile =

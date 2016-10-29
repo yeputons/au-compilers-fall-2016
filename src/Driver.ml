@@ -32,20 +32,16 @@ let main = ()
            let basename = Filename.chop_suffix filename ".expr" in 
            X86.build stmt basename
          | _ ->
-           let rec read acc =
-             try
-               let r = read_int () in
-               Printf.printf "> ";
-               read (acc @ [r]) 
-             with End_of_file -> acc
+           let reader () =
+             Printf.printf "> ";
+             read_int ()
            in
-           let input = read [] in
-           let output =
-             match mode with
-             | `SM -> StackMachine.Interpreter.run input (StackMachine.Compile.stmt stmt)
-             | _   -> Interpreter.Stmt.eval input stmt
+           let writer x =
+             Printf.printf "%d\n" x
            in
-           List.iter (fun i -> Printf.printf "%d\n" i) output
+           match mode with
+           | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.stmt stmt)
+           | _   -> Interpreter.Stmt.eval reader writer stmt
         )
 
       | `Fail er -> Printf.eprintf "%s\n" er
