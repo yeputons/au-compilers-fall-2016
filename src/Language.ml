@@ -88,11 +88,21 @@ struct
     | %"read"  "(" x:IDENT ")"         {Read x}
     | %"write" "(" e:!(Expr.parse) ")" {Write e}
     | %"skip"                          {Skip}
-    | %"if" e:!(Expr.parse) "then" s1:parse s2:(-"else" parse)? "fi" {
-        If (e, s1, match s2 with None -> Skip | Some s2 -> s2)
+    | %"if" e1:!(Expr.parse) "then" s1:parse
+          ss:(-"elif" !(Expr.parse) -"then" parse)*
+             seopt:(-"else" parse)? "fi" {
+        let se = match seopt with None -> Skip | Some x -> x in
+        let conds = (e1, s1)::ss in
+        List.fold_right (fun (e, s) r -> If (e, s, r)) conds se
       }
     | %"while" e:!(Expr.parse) "do" s:parse "od" {
         While (e, s)
+      }
+    | %"repeat" s:parse "until" e:!(Expr.parse) {
+       Seq (s, While (Binop ("==", e, Const 0), s))
+      }
+    | %"for" s1:parse "," e:!(Expr.parse) "," s2:parse "do" s:parse "od" {
+       Seq (s1, While (e, Seq (s, s2)))
       }
   )
 
