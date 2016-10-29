@@ -1,0 +1,20 @@
+if 1 == 2 then
+  write(1)
+else
+  write(2)
+fi;
+if 1 != 2 then
+  write(3)
+else
+  write(4)
+fi;
+n := 3;
+while n > 0 do
+  k := 3;
+  while k > 0 do
+    write(n);
+    write(k);
+    k := k - 1
+  od;
+  n := n - 1
+od
