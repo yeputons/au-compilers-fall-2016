@@ -34,7 +34,11 @@ struct
         | S_JMP lbl -> run' (state, stack, input, output) (List.assoc lbl labels)
         | S_JZ lbl ->
           let x::stack' = stack in
-          run' (state, stack', input, output) (List.assoc lbl labels)
+          let iptr' =
+            if (x = 0)
+            then (List.assoc lbl labels)
+            else (iptr + 1) in
+          run' (state, stack', input, output) iptr'
         | _ ->
         run'
           (match code.(iptr) with
@@ -95,6 +99,15 @@ struct
         [|S_LABEL lbl_else|];
         stmt' f;
         [|S_LABEL lbl_end|]
+      ]
+    | While  (c, s) ->
+      let lbl_begin = next_lbl() in
+      let lbl_end = next_lbl() in
+      Array.concat [
+        [|S_LABEL lbl_begin|];
+        expr c; [|S_JZ lbl_end|];
+        stmt' s; [|S_JMP lbl_begin|];
+        [|S_LABEL lbl_end|];
       ]
     in
     stmt'

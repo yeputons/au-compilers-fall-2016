@@ -76,6 +76,7 @@ struct
     | Assign of string * Expr.t
     | Seq    of t * t
     | If     of Expr.t * t * t
+    | While  of Expr.t * t
 
   ostap (
     parse: s:simple d:(-";" parse)? {
@@ -89,6 +90,9 @@ struct
     | %"skip"                          {Skip}
     | %"if" e:!(Expr.parse) "then" s1:parse s2:(-"else" parse)? "fi" {
         If (e, s1, match s2 with None -> Skip | Some s2 -> s2)
+      }
+    | %"while" e:!(Expr.parse) "do" s:parse "od" {
+        While (e, s)
       }
   )
 

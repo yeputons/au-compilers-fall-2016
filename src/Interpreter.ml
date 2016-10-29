@@ -32,6 +32,12 @@ struct
       | If (e, s1, s2) ->
         let v = Expr.eval state' e in
         eval' c (if v <> 0 then s1 else s2)
+      | While (e, s) ->
+        let v = Expr.eval state' e in
+        if v <> 0 then
+          eval' (eval' c s) stmt
+        else
+          c
     in
     let (_, _, result) = eval' ([], input, []) stmt in
     result
