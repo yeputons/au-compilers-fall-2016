@@ -1,24 +1,24 @@
 type opnd = R of int | S of int | M of string | L of int
 
 let x86regs = [|
-  "%eax";
-  "%edx";
   "%ebx";
   "%ecx";
   "%esi";
-  "%edi"
+  "%edi";
+  "%eax";
+  "%edx"
 |]
 
 let num_of_regs = Array.length x86regs
-let first_free_reg = 2
+let last_free_reg = 4
 let word_size = 4
 
-let eax = R 0
-let edx = R 1
-let ebx = R 2
-let ecx = R 3
-let esi = R 4
-let edi = R 5
+let ebx = R 0
+let ecx = R 1
+let esi = R 2
+let edi = R 3
+let eax = R 4
+let edx = R 5
 
 type byte_reg = Al | Dl
 type set_suf = E | Ne | L | G | Le | Ge
@@ -76,10 +76,10 @@ class x86env =
 
 let allocate env stack =
   match stack with
-  | []                              -> R first_free_reg
-  | (S n)::_                        -> env#allocate (n+1); S (n+1)
-  | (R n)::_ when n < num_of_regs-1 -> R (n+1)
-  | _                               -> S 0
+  | []                                -> R 0
+  | (S n)::_                          -> env#allocate (n+1); S (n+1)
+  | (R n)::_ when n < last_free_reg-1 -> R (n+1)
+  | _                                 -> S 0
 
 module Show =
 struct
