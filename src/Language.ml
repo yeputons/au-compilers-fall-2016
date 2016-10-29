@@ -75,6 +75,7 @@ struct
     | Write  of Expr.t
     | Assign of string * Expr.t
     | Seq    of t * t
+    | If     of Expr.t * t * t
 
   ostap (
     parse: s:simple d:(-";" parse)? {
@@ -86,6 +87,9 @@ struct
     | %"read"  "(" x:IDENT ")"         {Read x}
     | %"write" "(" e:!(Expr.parse) ")" {Write e}
     | %"skip"                          {Skip}
+    | %"if" e:!(Expr.parse) "then" s1:parse s2:(-"else" parse)? "fi" {
+        If (e, s1, match s2 with None -> Skip | Some s2 -> s2)
+      }
   )
 
 end
