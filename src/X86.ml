@@ -192,7 +192,7 @@ end
 
 let compile stmt =
   let env = new x86env in
-  let code = Compile.stack_program env @@ StackMachine.Compile.stmt stmt in
+  let code = Compile.stack_program env @@ Array.to_list @@ StackMachine.Compile.stmt stmt in
   let asm  = Buffer.create 1024 in
   let (!!) s = Buffer.add_string asm s in
   let (!)  s = !!s; !!"\n" in
