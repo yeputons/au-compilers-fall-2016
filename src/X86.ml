@@ -53,6 +53,9 @@ type instr =
   | X86Ret
   | X86Call of string
   | X86Comm of string
+  | X86Lbl  of string
+  | X86Jmp  of string
+  | X86Jz   of string
 
 module S = Set.Make (String)
 
@@ -99,6 +102,9 @@ struct
     | X86Ret          -> "\tret"
     | X86Call p       -> Printf.sprintf "\tcall\t%s" p
     | X86Comm s       -> Printf.sprintf "// %s" s
+    | X86Lbl  l       -> Printf.sprintf "%s:" l
+    | X86Jmp  l       -> Printf.sprintf "\tjmp\t%s" l
+    | X86Jz   l       -> Printf.sprintf "\tjz\t%s" l
 
 end
 
@@ -183,6 +189,16 @@ struct
                    X86Div y;
                    X86Mov ((if op = "/" then eax else edx), x)])
             )
+          | S_LABEL l ->
+            assert (stack = []);
+            (stack, [X86Lbl l])
+          | S_JMP l ->
+            assert (stack = []);
+            (stack, [X86Jmp l]);
+          | S_JZ l ->
+            let x::stack' = stack in
+            assert (stack' = []);
+            (stack', [X86Cmp (L 0, x); X86Jz l])
         in
         [X86Comm (StackMachine.i_to_string i)] @ x86code @ compile stack' code'
     in
