@@ -30,7 +30,13 @@ module Interpreter =
 		  let y::stack' = stack in
 		  ((x, y)::state, stack', input, output)
               | S_BINOP s ->
-		  failwith "stack machine: binop"
+                  let x::y::stack' = stack in
+                  let res =
+                      match s with
+                      | "+" -> x + y
+                      | "*" -> x * y
+                      in
+                  (state, res::stack', input, output)
               )
               code'
       in
@@ -47,7 +53,7 @@ module Compile =
     let rec expr = function
     | Var   x -> [S_LD   x]
     | Const n -> [S_PUSH n]
-    | Binop (s, x, y) -> failwith "stack machine compiler: binop"
+    | Binop (s, x, y) -> expr x @ expr y @ [S_BINOP s]
 
     let rec stmt = function
     | Skip          -> []

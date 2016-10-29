@@ -93,7 +93,10 @@ module Compile =
 		  env#local x;
 		  let s::stack' = stack in
 		  (stack', [X86Mov (s, M x)])
-	      | S_BINOP _ -> failwith "x86 binop"
+	      | S_BINOP _ ->
+                  let x::y::stack' = stack in
+                  (y::stack', [X86Mov (x, y)])
+
 (*
               | S_ADD   ->
 		  let x::y::stack' = stack in
