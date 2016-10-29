@@ -24,8 +24,6 @@ struct
            (function i -> function (S_LABEL x) -> [(x, i)] | _ -> [])
            (Array.to_list code))
     in
-    List.iter (function (x, y) -> Printf.eprintf "%s-->%d\n" x y) labels;
-    Printf.eprintf "printed labels %d\n" (List.length labels);
     let rec run' (state, stack, input, output) iptr =
       if iptr >= Array.length code then
         output
@@ -81,7 +79,6 @@ struct
     let last_lbl_id = ref 0 in
     let next_lbl () =
       last_lbl_id := !last_lbl_id + 1;
-      Printf.eprintf "allocated %d\n" !last_lbl_id;
       Printf.sprintf "lbl_%d" !last_lbl_id
     in
     let rec stmt' = function
