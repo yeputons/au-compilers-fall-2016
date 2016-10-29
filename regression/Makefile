@@ -6,8 +6,8 @@ INTERPRETER_TESTS=test011
 check: $(TESTS) $(INTERPRETER_TESTS) 
 
 $(TESTS): %: %.expr
-	../rc.native     $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
-	../rc.native -so $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+	RC_RUNTIME=../runtime ../rc.native     $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+	RC_RUNTIME=../runtime ../rc.native -so $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 	cat $@.input | ../rc.native -i $< > $@.log && diff $@.log orig/$@.log
 	cat $@.input | ../rc.native -s $< > $@.log && diff $@.log orig/$@.log
 
