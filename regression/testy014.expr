@@ -1,0 +1,9 @@
+fun fib(n) begin
+  if n <= 0 then
+    return 1
+  fi;
+  write(n);
+  return fib(n - 1) + fib(n - 2)
+end
+read(x);
+write(fib(x))

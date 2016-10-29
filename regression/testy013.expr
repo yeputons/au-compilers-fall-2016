@@ -1,0 +1,14 @@
+fun fac(n) begin
+  if n <= 1 then
+    return 1
+  else
+     return n * fac(n - 1)
+  fi
+end
+read(tn);
+while tn > 0 do
+  read(x);
+  write(fac(x));
+  tn := tn - 1
+od
+
