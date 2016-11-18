@@ -82,6 +82,7 @@ struct
     | Seq    of t * t
     | If     of Expr.t * t * t
     | While  of Expr.t * t
+    | Until  of t * Expr.t
 
   ostap (
     parse: s:simple d:(-";" parse)? {
@@ -104,7 +105,7 @@ struct
         While (e, s)
       }
     | %"repeat" s:parse "until" e:!(Expr.parse) {
-       Seq (s, While (Binop ("==", e, Const 0), s))
+        Until (s, e)
       }
     | %"for" s1:parse "," e:!(Expr.parse) "," s2:parse "do" s:parse "od" {
        Seq (s1, While (e, Seq (s, s2)))

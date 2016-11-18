@@ -38,6 +38,14 @@ struct
           eval' (eval' c s) stmt
         else
           c
+      | Until (s, e) ->
+        let (state, input, output) as c = eval' c s in
+        let state' x = List.assoc x state in
+        let v = Expr.eval state' e in
+        if v = 0 then
+          eval' c stmt
+        else
+          c
     in
     let (_, _, result) = eval' ([], input, []) stmt in
     result

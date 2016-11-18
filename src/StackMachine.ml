@@ -106,6 +106,13 @@ struct
         stmt' s; [|S_JMP lbl_begin|];
         [|S_LABEL lbl_end|];
       ]
+    | Until (s, c) ->
+      let lbl_begin = next_lbl() in
+      Array.concat [
+        [|S_LABEL lbl_begin|];
+        stmt' s;
+        expr c; [|S_JZ lbl_begin|];
+      ]
     in
     stmt'
 end
