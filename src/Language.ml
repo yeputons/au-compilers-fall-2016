@@ -9,6 +9,9 @@ struct
     | Var   of string
     | Binop of string * t * t
 
+  let bti b = if b then 1 else 0
+  let itb i = i <> 0
+
   let eval_binop s x y =
     match s with
     | "+" -> x + y
@@ -16,14 +19,16 @@ struct
     | "*" -> x * y
     | "/" -> x / y
     | "%" -> x mod y
-    | "<=" -> if x <= y then 1 else 0
-    | ">=" -> if x >= y then 1 else 0
-    | "<"  -> if x <  y then 1 else 0
-    | ">"  -> if x >  y then 1 else 0
-    | "==" -> if x =  y then 1 else 0
-    | "!=" -> if x <> y then 1 else 0
-    | "&&" -> if (x <> 0) && (y <> 0) then 1 else 0
-    | "!!" -> if (x <> 0) || (y <> 0) then 1 else 0
+    | _ -> bti (match s with
+      | "<=" -> x <= y
+      | ">=" -> x >= y
+      | "<"  -> x <  y
+      | ">"  -> x >  y
+      | "==" -> x =  y
+      | "!=" -> x <> y
+      | "&&" -> itb x && itb y
+      | "!!" -> itb x || itb y
+      )
 
   ostap (
     parse: ori;
