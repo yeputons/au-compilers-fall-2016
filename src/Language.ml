@@ -31,37 +31,23 @@ struct
       )
 
   ostap (
-    parse: ori;
-
-    ori:
-      l:andi suf:("!!" andi)* {
-            List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
-      }
-    | andi;
-
-    andi:
-      l:cmpi suf:("&&" cmpi)* {
-        List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
-      }
-    | cmpi;
-
-    cmpi:
-      l:addi suf:(("<=" | "<" | "==" | "!=" | ">=" | ">") addi)* {
-        List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
-      }
-    | addi;
-
-    addi:
-      l:mulli suf:(("+" | "-") mulli)* {
-        List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
-      }
-    | mulli;
-
-    mulli:
-      l:primary suf:(("*" | "/" | "%") primary)* {
-        List.fold_left (fun l (op, r) -> Binop (Token.repr op, l, r)) l suf
-      }
-    | primary;
+    parse:
+        !(Ostap.Util.expr
+            (fun x -> x)
+            (Array.map (fun (a, s) -> a,
+                            List.map  (fun s -> ostap(- $(s)),
+                                       (fun x y -> Binop (s, x, y))
+                                      ) s
+                       )
+                       [|
+                            `Lefta, ["!!"];
+                            `Lefta, ["&&"];
+                            `Nona , ["=="; "!="; "<="; "<"; ">="; ">"];
+                            `Lefta, ["+" ; "-"];
+                            `Lefta, ["*" ; "/"; "%"];
+                       |]
+            )
+            primary);
 
     primary:
       n:DECIMAL {Const n}
