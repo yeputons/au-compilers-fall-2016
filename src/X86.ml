@@ -37,16 +37,20 @@ let set_suf_to_string suf = match suf with
 let byte_reg_to_string r = match r with
   | Al -> "al" | Dl -> "dl"
 
+type binop = Add | Sub | Mul | And | Or | Mov | Cmp
+let binop_to_string = function
+  | Add -> "addl"
+  | Sub -> "subl"
+  | Mul -> "imull"
+  | And -> "andl"
+  | Or  -> "orl"
+  | Mov -> "movl"
+  | Cmp -> "cmpl"
+
 type instr =
-  | X86Add  of opnd * opnd
-  | X86Sub  of opnd * opnd
-  | X86Mul  of opnd * opnd
+  | X86Binop of binop * opnd * opnd
   | X86Div  of opnd
-  | X86And  of opnd * opnd
-  | X86Or   of opnd * opnd
-  | X86Mov  of opnd * opnd
   | X86Cdq
-  | X86Cmp  of opnd * opnd
   | X86Set  of set_suf * byte_reg
   | X86Push of opnd
   | X86Pop  of opnd
@@ -87,15 +91,10 @@ struct
     | L i -> Printf.sprintf "$%d" i
 
   let instr = function
-    | X86Add (s1, s2) -> Printf.sprintf "\taddl\t%s,\t%s"  (opnd s1) (opnd s2)
-    | X86Sub (s1, s2) -> Printf.sprintf "\tsubl\t%s,\t%s"  (opnd s1) (opnd s2)
-    | X86Mul (s1, s2) -> Printf.sprintf "\timull\t%s,\t%s" (opnd s1) (opnd s2)
+    | X86Binop (o, s1, s2) -> Printf.sprintf "\t%s\t%s,\t%s"
+                                (binop_to_string o) (opnd s1) (opnd s2)
     | X86Div s2       -> Printf.sprintf "\tidivl\t%s"      (opnd s2)
-    | X86And (s1, s2) -> Printf.sprintf "\tandl\t%s,\t%s"  (opnd s1) (opnd s2)
-    | X86Or  (s1, s2) -> Printf.sprintf "\torl\t%s,\t%s"   (opnd s1) (opnd s2)
-    | X86Mov (s1, s2) -> Printf.sprintf "\tmovl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Cdq          -> Printf.sprintf "\tcdq"
-    | X86Cmp (s1, s2) -> Printf.sprintf "\tcmpl\t%s,\t%s"  (opnd s1) (opnd s2)
     | X86Set (suf, r) -> Printf.sprintf "\tset%s\t%%%s" (set_suf_to_string suf) (byte_reg_to_string r)
     | X86Push s       -> Printf.sprintf "\tpushl\t%s"      (opnd s )
     | X86Pop  s       -> Printf.sprintf "\tpopl\t%s"       (opnd s )
@@ -122,7 +121,7 @@ struct
           match i with
           | S_READ   ->
             let s = allocate env stack in
-            (s::stack, [X86Call "read"; X86Mov (eax, s)])
+            (s::stack, [X86Call "read"; X86Binop (Mov, eax, s)])
           | S_WRITE  ->
             let s::stack' = stack in
             (stack', match s with
@@ -131,20 +130,20 @@ struct
             )
           | S_PUSH n ->
             let s = allocate env stack in
-            (s::stack, [X86Mov (L n, s)])
+            (s::stack, [X86Binop (Mov, L n, s)])
           | S_LD x   ->
             env#local x;
             let s = allocate env stack in
             (s::stack, match s with
-              | R _ -> [X86Mov (M x, s)]
-              | _   -> [X86Mov (M x, eax); X86Mov (eax, s)]
+              | R _ -> [X86Binop (Mov, M x, s)]
+              | _   -> [X86Binop (Mov, M x, eax); X86Binop (Mov, eax, s)]
             )
           | S_ST x   ->
             env#local x;
             let s::stack' = stack in
             (stack', match s with
-              | R _ -> [X86Mov (s, M x)]
-              | _   -> [X86Mov (s, eax); X86Mov (eax, M x)]
+              | R _ -> [X86Binop (Mov, s, M x)]
+              | _   -> [X86Binop (Mov, s, eax); X86Binop (Mov, eax, M x)]
             )
           | S_BINOP op ->
             let y::x::stack' = stack in
@@ -155,39 +154,39 @@ struct
                  | R _, _ | _, R _ ->
                    ([], y)
                  | _ ->
-                   ([X86Mov (y, edx)], edx)
+                   ([X86Binop (Mov, y, edx)], edx)
                ) in
                (x::stack', preload @
                            (match op with
-                            | "+" -> [X86Add (y', x)]
-                            | "-" -> [X86Sub (y', x)]
+                            | "+" -> [X86Binop (Add, y', x)]
+                            | "-" -> [X86Binop (Sub, y', x)]
                             | "*" -> (match x, y' with
-                                | R _, _ -> [X86Mul (y', x)]
-                                | _, R _ -> [X86Mul (x, y'); X86Mov (y', x)]
+                                | R _, _ -> [X86Binop (Mul, y', x)]
+                                | _, R _ -> [X86Binop (Mul, x, y'); X86Binop (Mov, y', x)]
                               )
                             | _ -> [
-                                X86Mov (L 0, eax);
-                                X86Cmp (y', x);
+                                X86Binop (Mov, L 0, eax);
+                                X86Binop (Cmp, y', x);
                                 X86Set (binop_to_set_suf op, Al);
-                                X86Mov (eax, x)
+                                X86Binop (Mov, eax, x)
                               ]
                            ))
              | "&&" | "!!" -> (x::stack', [
-                 X86Mov (L 0, eax);
-                 X86Cmp (L 0, x);
+                 X86Binop (Mov, L 0, eax);
+                 X86Binop (Cmp, L 0, x);
                  X86Set (Ne, Al);
-                 X86Mov (L 0, edx);
-                 X86Cmp (L 0, y);
+                 X86Binop (Mov, L 0, edx);
+                 X86Binop (Cmp, L 0, y);
                  X86Set (Ne, Dl);
-                 if op = "&&" then X86And (edx, eax) else X86Or (edx, eax);
-                 X86Mov (eax, x);
+                 if op = "&&" then X86Binop (And, edx, eax) else X86Binop (Or, edx, eax);
+                 X86Binop (Mov, eax, x);
                ])
              | "/" | "%" ->
                (x::stack', [
-                   X86Mov (x, eax);
+                   X86Binop (Mov, x, eax);
                    X86Cdq;
                    X86Div y;
-                   X86Mov ((if op = "/" then eax else edx), x)])
+                   X86Binop (Mov, (if op = "/" then eax else edx), x)])
             )
           | S_LABEL l ->
             assert (stack = []);
@@ -198,7 +197,7 @@ struct
           | S_JZ l ->
             let x::stack' = stack in
             assert (stack' = []);
-            (stack', [X86Cmp (L 0, x); X86Jz l])
+            (stack', [X86Binop (Cmp, L 0, x); X86Jz l])
         in
         [X86Comm (StackMachine.i_to_string i)] @ x86code @ compile stack' code'
     in
