@@ -86,7 +86,7 @@ struct
 
   let opnd = function
     | R i -> x86regs.(i)
-    | S i -> Printf.sprintf "-%d(%%ebp)" (i * word_size)
+    | S i -> Printf.sprintf "-%d(%%ebp)" ((i+1) * word_size)
     | M x -> x
     | L i -> Printf.sprintf "$%d" i
 
