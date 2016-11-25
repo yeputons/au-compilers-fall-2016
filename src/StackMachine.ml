@@ -1,4 +1,5 @@
 open GT
+open Util
      @type fhead  = {args:string list; locals:string list; max_stack:int} with show
      @type i =
         | S_READ
@@ -125,15 +126,7 @@ struct
              (state, stack)
            | S_CALL (lbl, args_cnt) ->
              let iptr' = List.assoc lbl labels in
-             let rec split n l =
-               if n > 0 then
-                 let x::xs = l in
-                 let (a, b) = split (n - 1) xs in
-                 (x::a, b)
-               else
-                 ([], l)
-             in
-             let (args, stack') = split args_cnt stack in
+             let (args, stack') = splitAt args_cnt stack in
              let (_, [res]) = run' ([], args) iptr' [] in
              (state, res::stack')
           )
