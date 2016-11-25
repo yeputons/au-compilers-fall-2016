@@ -69,6 +69,14 @@ struct
     ()
 end
 
+class smenv =
+  object(self)
+    val mutable last_lbl_id = 0
+    method next_lbl =
+      last_lbl_id <- last_lbl_id + 1;
+      Printf.sprintf "lbl_%d" last_lbl_id
+  end
+
 module Compile =
 struct
 
@@ -81,11 +89,7 @@ struct
     | Binop (s, x, y) -> Array.concat [expr x; expr y; [|S_BINOP s|]]
 
   let stmt =
-    let last_lbl_id = ref 0 in
-    let next_lbl () =
-      last_lbl_id := !last_lbl_id + 1;
-      Printf.sprintf "lbl_%d" !last_lbl_id
-    in
+    let env = new smenv in
     let rec stmt' = function
     | Skip          -> [|S_COMM "skip"|]
     | Assign (x, e) -> Array.concat [
@@ -105,8 +109,8 @@ struct
       ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
     | If     (c, t, f) ->
-      let lbl_else = next_lbl () in
-      let lbl_end = next_lbl () in
+      let lbl_else = env#next_lbl in
+      let lbl_end = env#next_lbl in
       Array.concat [
         [|S_COMM ("if " ^ (t_to_string c))|];
         expr c; [|S_JZ lbl_else|];
@@ -119,8 +123,8 @@ struct
         [|S_LABEL lbl_end|];
       ]
     | While  (c, s) ->
-      let lbl_begin = next_lbl() in
-      let lbl_end = next_lbl() in
+      let lbl_begin = env#next_lbl in
+      let lbl_end = env#next_lbl in
       Array.concat [
         [|S_COMM ("while " ^ (t_to_string c))|];
         [|S_LABEL lbl_begin|];
@@ -131,7 +135,7 @@ struct
         [|S_LABEL lbl_end|];
       ]
     | Until (s, c) ->
-      let lbl_begin = next_lbl() in
+      let lbl_begin = env#next_lbl in
       Array.concat [
         [|S_COMM "repeat {"|];
         [|S_LABEL lbl_begin|];
