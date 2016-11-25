@@ -1,5 +1,5 @@
 open GT
-     @type fhead  = {args:string list; locals:string list} with show
+     @type fhead  = {args:string list; locals:string list; max_stack:int} with show
      @type i =
         | S_READ
         | S_WRITE
@@ -28,6 +28,33 @@ let used_vars code =
     | _ -> s
   in
   S.elements @@ Array.fold_right add_var code S.empty
+
+let max_stack code =
+  let stack_change = function
+    | S_READ    -> (0, true)
+    | S_WRITE   -> (1, false)
+    | S_PUSH  _ -> (0, true)
+    | S_LD    _ -> (0, true)
+    | S_ST    _ -> (1, false)
+    | S_DROP    -> (1, false)
+    | S_BINOP _ -> (2, true)
+    | S_JZ    _ -> (1, false)
+    | S_CALL (_, args) -> (args, true)
+    | S_RET   _ -> (1, false)
+    | S_LABEL _
+    | S_JMP   _
+    | S_COMM  _
+    | S_FUN_BEGIN _
+    | S_FUN_END -> (0, false)
+  in
+  let folder (c, m) i =
+    let (args, ret) = stack_change i in
+    let c' = c - args + (if ret then 1 else 0) in
+    assert (c' >= 0);
+    (c', max c' m)
+  in
+  let (0, m) = Array.fold_left folder (0, 0) code in
+  m
 
 module Interpreter =
 struct
@@ -216,8 +243,9 @@ struct
         let lbl_end = env#next_end_lbl in
         let body = stmt env body in
         let locals = S.elements @@ S.diff (S.of_list (used_vars body)) (S.of_list args) in
+        let max_stack = max_stack body in
         Array.concat [
-          [|S_FUN_BEGIN {args=args; locals=locals}|];
+          [|S_FUN_BEGIN {args=args; locals=locals; max_stack=max_stack}|];
           body;
           [|S_COMM "FUN_END";
             S_PUSH 0xDEADBEEF;
