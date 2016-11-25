@@ -13,6 +13,14 @@ struct
   let bti b = if b then 1 else 0
   let itb i = i <> 0
 
+  let rec t_to_string = function
+    | Const c  -> string_of_int c
+    | Var name -> name
+    | Binop (op, a, b) -> Printf.sprintf "(%s %s %s)" (t_to_string a) op (t_to_string b)
+    | FunCall (name, args) ->
+      let args_str = List.map t_to_string args in
+      Printf.sprintf "%s(%s)" name (String.concat ", " args_str)
+
   let eval_binop s x y =
     match s with
     | "+" -> x + y
