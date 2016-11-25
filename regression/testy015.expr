@@ -1,0 +1,21 @@
+fun fib(n) begin
+  a := 0;
+  b := 1;
+  while n > 0 do
+    c := a + b;
+    a := b;
+    b := c;
+    if b > 50 then
+      return -1
+    fi;
+    n := n - 1
+  od;
+  return b
+end
+
+read(x);
+while x > 0 do
+  write(fib(x));
+  read(x)
+od
+
