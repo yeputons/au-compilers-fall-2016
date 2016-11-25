@@ -1,4 +1,6 @@
-type opnd = R of int | S of int | M of string | L of int
+open Util
+
+type opnd = R of int | S of int | A of int | L of int
 
 let x86regs = [|
   "%ebx";
@@ -6,12 +8,15 @@ let x86regs = [|
   "%esi";
   "%edi";
   "%eax";
-  "%edx"
+  "%edx";
+  "%esp";
+  "%ebp"
 |]
 
 let num_of_regs = Array.length x86regs
 let num_of_free_regs = 4
 let word_size = 4
+let regs_under_ebp = 3
 
 let ebx = R 0
 let ecx = R 1
@@ -19,6 +24,8 @@ let esi = R 2
 let edi = R 3
 let eax = R 4
 let edx = R 5
+let esp = R 6
+let ebp = R 7
 
 type byte_reg = Al | Dl
 type set_suf = E | Ne | L | G | Le | Ge
@@ -68,6 +75,10 @@ class x86env =
     val    last_allocated  = ref 0
     method allocate n = last_allocated := max n !last_allocated
     method cnt_allocated  = 1 + !last_allocated
+
+    val mutable vars : (string * opnd) list = []
+    method set_vars l = vars <- l
+    method get_var x = List.assoc x vars
   end
 
 let allocate env stack =
@@ -82,8 +93,8 @@ struct
 
   let opnd = function
     | R i -> x86regs.(i)
-    | S i -> Printf.sprintf "-%d(%%ebp)" ((i+1) * word_size)
-    | M x -> x
+    | S i -> Printf.sprintf "%d(%%ebp)" ((-regs_under_ebp - i - 1) * word_size)
+    | A i -> Printf.sprintf "%d(%%ebp)" ((i+2) * word_size) (* +0 - old ebp, +1 - return address, +2 - args *)
     | L i -> Printf.sprintf "$%d" i
 
   let instr = function
@@ -132,17 +143,22 @@ struct
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, L n, s)])
           | S_LD x   ->
+            let x' = env#get_var x in
             let s = allocate env stack in
             (s::stack, match s with
-              | R _ -> [X86Binop (Mov, M x, s)]
-              | _   -> [X86Binop (Mov, M x, eax); X86Binop (Mov, eax, s)]
+              | R _ -> [X86Binop (Mov, x', s)]
+              | _   -> [X86Binop (Mov, x', eax); X86Binop (Mov, eax, s)]
             )
           | S_ST x   ->
+            let x' = env#get_var x in
             let s::stack' = stack in
             (stack', match s with
-              | R _ -> [X86Binop (Mov, s, M x)]
-              | _   -> [X86Binop (Mov, s, eax); X86Binop (Mov, eax, M x)]
+              | R _ -> [X86Binop (Mov, s, x')]
+              | _   -> [X86Binop (Mov, s, eax); X86Binop (Mov, eax, x')]
             )
+          | S_DROP ->
+            let _::stack' = stack in
+            (stack', [])
           | S_BINOP op ->
             let y::x::stack' = stack in
             (match op with
@@ -196,6 +212,50 @@ struct
             let x::stack' = stack in
             assert (stack' = []);
             (stack', [X86Binop (Cmp, L 0, x); X86Jz l])
+          | S_CALL (l, args_cnt) ->
+            let (args, stack') = splitAt args_cnt stack in
+            let x = allocate env stack' in
+            (x::stack', List.concat [
+              [X86Push ecx;
+               X86Push edx];
+              List.rev @@ List.map (fun n -> X86Push n) args;
+              [X86Call l;
+               X86Binop (Add, L (word_size * (List.length args)), esp);
+               X86Pop edx;
+               X86Pop ecx;
+               X86Binop (Mov, eax, x)]
+            ])
+          | S_RET l ->
+            let [x] = stack in
+            ([], [X86Binop (Mov, x, eax); X86Jmp l])
+          | S_FUN_BEGIN {args; locals; max_stack} ->
+            assert (stack = []);
+            let tmp_cnt = max 0 (max_stack - num_of_free_regs) in
+            let args = List.mapi (fun i n -> (n, A i)) args in
+            let locals = List.mapi (fun i n -> (n, S (tmp_cnt + i))) locals in
+            let vars = args @ locals in
+            env#set_vars vars;
+            let comms = List.map (fun (n, o) -> X86Comm (Printf.sprintf "var %s -> %s" n (Show.opnd o))) vars in
+            (* Two following blocks of code should be synchronized with regs_under_ebp *)
+            (stack, [
+                X86Push ebp;
+                X86Binop (Mov, esp, ebp);
+                X86Push ebx;
+                X86Push esi;
+                X86Push edi;
+                X86Binop (Sub, L (word_size * (tmp_cnt + List.length locals)), esp);
+              ] @ comms);
+          | S_FUN_END ->
+            assert (stack = []);
+            (stack, [
+                X86Binop (Mov, ebp, esp);
+                X86Binop (Sub, L (word_size * regs_under_ebp), esp);
+                X86Pop edi;
+                X86Pop esi;
+                X86Pop ebx;
+                X86Pop ebp;
+                X86Ret
+              ]);
         in
         [X86Comm (StackMachine.i_to_string i)] @ x86code @ compile stack' code'
     in
@@ -203,40 +263,16 @@ struct
 
 end
 
-let compile stmt =
+let compile prog =
   let env = new x86env in
-  let smcode = StackMachine.Compile.stmt (new StackMachine.smenv) stmt in
+  let smcode = StackMachine.Compile.prog prog in
   let code = Compile.stack_program env @@ Array.to_list @@ smcode in
   let asm  = Buffer.create 1024 in
   let (!!) s = Buffer.add_string asm s in
   let (!)  s = !!s; !!"\n" in
   !"\t.text";
-  List.iter (fun x ->
-      !(Printf.sprintf "\t.comm\t%s,\t%d,\t%d" x word_size word_size))
-    (StackMachine.used_vars smcode);
   !"\t.globl\tmain";
-  let prologue, epilogue =
-    if env#cnt_allocated = 0
-    then (fun () -> ()), (fun () -> ())
-    else
-      (fun () ->
-         !"\tpushl\t%ebp";
-         !"\tmovl\t%esp,\t%ebp";
-         !(Printf.sprintf "\tsubl\t$%d,\t%%esp" (env#cnt_allocated * word_size))
-      ),
-      (fun () ->
-         !"\tmovl\t%ebp,\t%esp";
-         !"\tpopl\t%ebp"
-      )
-  in
-  !"main:";
-  prologue();
-  !"// ===== START =====";
   List.iter (fun i -> !(Show.instr i)) code;
-  !"// ===== END =====";
-  epilogue();
-  !"\txorl\t%eax,\t%eax";
-  !"\tret";
   Buffer.contents asm
 
 let build stmt name =

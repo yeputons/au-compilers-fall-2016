@@ -16,11 +16,10 @@ let main = ()
       in
       match parse filename with
       | `Ok prog ->
-        let Language.Prog.Fun ([], stmt) = List.assoc Language.Prog.ProgBody prog in
         (match mode with
          | `X86 ->
            let basename = Filename.chop_suffix filename ".expr" in 
-           X86.build stmt basename
+           X86.build prog basename
          | _ ->
            let reader () =
              Printf.printf "> ";
