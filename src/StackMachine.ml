@@ -241,7 +241,7 @@ struct
           [|S_FUN_BEGIN {args=args; locals=locals; max_stack=max_stack}|];
           body;
           [|S_COMM "FUN_END";
-            S_PUSH 0xDEADBEEF;
+            S_PUSH 0;
             S_RET lbl_end;
             S_LABEL lbl_end;
             S_FUN_END|];
