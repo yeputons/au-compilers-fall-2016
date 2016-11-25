@@ -85,6 +85,8 @@ struct
     | Ignore of Expr.t
     | Return of Expr.t
 
+  let keywords = ["read"; "write"; "skip"; "return"; "if"; "then"; "elif"; "else"; "fi"; "while"; "do"; "od"; "repeat"; "until"; "for"]
+
   ostap (
     parse: s:simple d:(-";" parse)? {
         match d with None -> s | Some d -> Seq (s, d)
@@ -128,6 +130,8 @@ struct
   type f = Fun of string list * Stmt.t
   type t = (fname * f) list
 
+  let keywords = Stmt.keywords @ ["fun"; "begin"; "end"]
+
   ostap (
     parse: fs:funcdef* s:!(Stmt.parse) {
         (ProgBody, Fun ([], s))::fs
@@ -139,5 +143,20 @@ struct
 
     arg: IDENT
   )
+
+  let parse_str s =
+    Util.parse
+      (object
+        inherit Matcher.t s
+        inherit Util.Lexers.ident keywords s
+        inherit Util.Lexers.decimal s
+        inherit Util.Lexers.skip [
+            Matcher.Skip.whitespaces " \t\n";
+            Matcher.Skip.lineComment "--";
+            Matcher.Skip. nestedComment "(*" "*)"
+          ] s
+      end
+      )
+      (ostap (!(parse) -EOF))
 
 end
