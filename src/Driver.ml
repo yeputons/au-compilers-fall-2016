@@ -42,7 +42,7 @@ let main = ()
            in
            match mode with
            | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.stmt stmt)
-           | _   -> Interpreter.Prog.eval reader writer prog
+           | `Int   -> Interpreter.Prog.eval reader writer prog
         )
 
       | `Fail er -> Printf.eprintf "%s\n" er
