@@ -65,10 +65,6 @@ module S = Set.Make (String)
 
 class x86env =
   object(self)
-    val    local_vars = ref S.empty
-    method local x    = local_vars := S.add x !local_vars
-    method local_vars = S.elements !local_vars
-
     val    last_allocated  = ref 0
     method allocate n = last_allocated := max n !last_allocated
     method cnt_allocated  = 1 + !last_allocated
@@ -134,14 +130,12 @@ struct
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, L n, s)])
           | S_LD x   ->
-            env#local x;
             let s = allocate env stack in
             (s::stack, match s with
               | R _ -> [X86Binop (Mov, M x, s)]
               | _   -> [X86Binop (Mov, M x, eax); X86Binop (Mov, eax, s)]
             )
           | S_ST x   ->
-            env#local x;
             let s::stack' = stack in
             (stack', match s with
               | R _ -> [X86Binop (Mov, s, M x)]
@@ -209,14 +203,15 @@ end
 
 let compile stmt =
   let env = new x86env in
-  let code = Compile.stack_program env @@ Array.to_list @@ StackMachine.Compile.stmt stmt in
+  let smcode = StackMachine.Compile.stmt stmt in
+  let code = Compile.stack_program env @@ Array.to_list @@ smcode in
   let asm  = Buffer.create 1024 in
   let (!!) s = Buffer.add_string asm s in
   let (!)  s = !!s; !!"\n" in
   !"\t.text";
   List.iter (fun x ->
       !(Printf.sprintf "\t.comm\t%s,\t%d,\t%d" x word_size word_size))
-    env#local_vars;
+    (StackMachine.used_vars smcode);
   !"\t.globl\tmain";
   let prologue, epilogue =
     if env#cnt_allocated = 0
