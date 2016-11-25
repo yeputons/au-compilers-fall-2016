@@ -66,7 +66,8 @@ struct
             else
               state
     in
-    eval' (Computing []) stmt;
+    (* We do not want returns inside main body *)
+    let (Computing _) = eval' (Computing []) stmt in
     ()
 
 end
