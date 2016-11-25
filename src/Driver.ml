@@ -21,6 +21,7 @@ let main = ()
       let mode, filename =
         match Sys.argv.(1) with
         | "-s" -> `SM , Sys.argv.(2)
+        | "-so"-> `SO , Sys.argv.(2)
         | "-o" -> `X86, Sys.argv.(2)
         | "-i" -> `Int, Sys.argv.(2)
         | _ -> raise (Invalid_argument "invalid flag")
@@ -42,6 +43,10 @@ let main = ()
            in
            match mode with
            | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.stmt stmt)
+           | `SO ->
+             let body = StackMachine.Compile.stmt stmt in
+             let pr i = Printf.printf "%s\n" (StackMachine.i_to_string i) in
+             Array.iter pr body
            | `Int   -> Interpreter.Prog.eval reader writer prog
         )
 
@@ -49,4 +54,4 @@ let main = ()
     with 
     | Invalid_argument _ ->
       Printf.printf "Usage: rc.byte <command> <name.expr>\n";
-      Printf.printf "  <command> should be one of: -i, -s, -o\n"
+      Printf.printf "  <command> should be one of: -i, -s, -o, -so\n"
