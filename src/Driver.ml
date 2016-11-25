@@ -45,7 +45,9 @@ let main = ()
            | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.stmt stmt)
            | `SO ->
              let body = StackMachine.Compile.stmt stmt in
-             let pr i = Printf.printf "%s\n" (StackMachine.i_to_string i) in
+             let pr = function
+               | StackMachine.S_COMM c -> Printf.printf "\n// %s\n" c
+               | i -> Printf.printf "\t%s\n" (StackMachine.i_to_string i) in
              Array.iter pr body
            | `Int   -> Interpreter.Prog.eval reader writer prog
         )
