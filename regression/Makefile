@@ -1,7 +1,8 @@
 TESTS_STACK=
-TESTS_INTERPRET=test011
-TESTS_ORIG=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET), $(sort $(basename $(wildcard test???.expr))))
-TESTS_Y=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET), $(sort $(basename $(wildcard testy???.expr))))
+TESTS_INTERPRET=
+TESTS_IGNORE=test011
+TESTS_ORIG=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET) $(TESTS_IGNORE), $(sort $(basename $(wildcard test???.expr))))
+TESTS_Y=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET) $(TESTS_IGNORE), $(sort $(basename $(wildcard testy???.expr))))
 TESTS=$(TESTS_ORIG) $(TESTS_Y)
 
 .PHONY: check $(TESTS) list_tests check_orig check_y check_interpreter
