@@ -42,9 +42,9 @@ let main = ()
              Printf.printf "%d\n" x
            in
            match mode with
-           | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.stmt stmt)
+           | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.prog prog)
            | `SO ->
-             let body = StackMachine.Compile.stmt stmt in
+             let body = StackMachine.Compile.prog prog in
              let pr = function
                | StackMachine.S_COMM c -> Printf.printf "\n// %s\n" c
                | i -> Printf.printf "\t%s\n" (StackMachine.i_to_string i) in

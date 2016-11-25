@@ -203,7 +203,7 @@ end
 
 let compile stmt =
   let env = new x86env in
-  let smcode = StackMachine.Compile.stmt stmt in
+  let smcode = StackMachine.Compile.stmt (new StackMachine.smenv) stmt in
   let code = Compile.stack_program env @@ Array.to_list @@ smcode in
   let asm  = Buffer.create 1024 in
   let (!!) s = Buffer.add_string asm s in
