@@ -10,7 +10,7 @@ let x86regs = [|
 |]
 
 let num_of_regs = Array.length x86regs
-let last_free_reg = 4
+let num_of_free_regs = 4
 let word_size = 4
 
 let ebx = R 0
@@ -72,10 +72,10 @@ class x86env =
 
 let allocate env stack =
   match stack with
-  | []                                -> R 0
-  | (S n)::_                          -> env#allocate (n+1); S (n+1)
-  | (R n)::_ when n < last_free_reg-1 -> R (n+1)
-  | _                                 -> S 0
+  | []                                   -> R 0
+  | (S n)::_                             -> env#allocate (n+1); S (n+1)
+  | (R n)::_ when n < num_of_free_regs-1 -> R (n+1)
+  | _                                    -> S 0
 
 module Show =
 struct
