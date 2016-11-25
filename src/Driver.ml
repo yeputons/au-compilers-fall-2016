@@ -14,7 +14,7 @@ let parse infile =
         ] s
     end
     )
-    (ostap (!(Language.Stmt.parse) -EOF))
+    (ostap (!(Language.Prog.parse) -EOF))
 
 let main = ()
     try
@@ -26,7 +26,8 @@ let main = ()
         | _ -> raise (Invalid_argument "invalid flag")
       in
       match parse filename with
-      | `Ok stmt -> 
+      | `Ok prog ->
+        let Language.Prog.Fun ([], stmt) = List.assoc Language.Prog.ProgBody prog in
         (match mode with
          | `X86 ->
            let basename = Filename.chop_suffix filename ".expr" in 
@@ -41,7 +42,7 @@ let main = ()
            in
            match mode with
            | `SM -> StackMachine.Interpreter.run reader writer (StackMachine.Compile.stmt stmt)
-           | _   -> Interpreter.Stmt.eval reader writer stmt
+           | _   -> Interpreter.Prog.eval reader writer prog
         )
 
       | `Fail er -> Printf.eprintf "%s\n" er

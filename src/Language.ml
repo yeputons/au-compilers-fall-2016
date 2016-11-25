@@ -5,9 +5,10 @@ module Expr =
 struct
 
   type t =
-    | Const of int
-    | Var   of string
-    | Binop of string * t * t
+    | Const   of int
+    | Var     of string
+    | Binop   of string * t * t
+    | FunCall of string * t list
 
   let bti b = if b then 1 else 0
   let itb i = i <> 0
@@ -51,7 +52,11 @@ struct
 
     primary:
       n:DECIMAL {Const n}
-    | x:IDENT   {Var   x}
+    | x:IDENT call:(-"(" !(Util.list0 parse) -")")? {
+      match call with
+      | Some (args) -> FunCall(x, args)
+      | None -> Var x
+    }
     | -"(" parse -")"
   )
 
@@ -69,6 +74,8 @@ struct
     | If     of Expr.t * t * t
     | While  of Expr.t * t
     | Until  of t * Expr.t
+    | Ignore of Expr.t
+    | Return of Expr.t
 
   ostap (
     parse: s:simple d:(-";" parse)? {
@@ -76,10 +83,17 @@ struct
       };
 
     simple:
-      x:IDENT ":=" e:!(Expr.parse)     {Assign (x, e)}
+      x:IDENT res:(
+                ":=" e:!(Expr.parse) {Assign (x, e)}
+              | "(" args:!(Util.list0 Expr.parse) ")" {
+                    Ignore (FunCall (x, args))
+                }
+              )
+      { res }
     | %"read"  "(" x:IDENT ")"         {Read x}
     | %"write" "(" e:!(Expr.parse) ")" {Write e}
     | %"skip"                          {Skip}
+    | %"return" e:!(Expr.parse)        {Return e}
     | %"if" e1:!(Expr.parse) "then" s1:parse
           ss:(-"elif" !(Expr.parse) -"then" parse)*
              seopt:(-"else" parse)? "fi" {
@@ -96,6 +110,26 @@ struct
     | %"for" s1:parse "," e:!(Expr.parse) "," s2:parse "do" s:parse "od" {
        Seq (s1, While (e, Seq (s, s2)))
       }
+  )
+
+end
+
+module Prog =
+struct
+  type fname = FunName of string | ProgBody
+  type f = Fun of string list * Stmt.t
+  type t = (fname * f) list
+
+  ostap (
+    parse: fs:funcdef* s:!(Stmt.parse) {
+        (ProgBody, Fun ([], s))::fs
+      };
+
+    funcdef: %"fun" n:IDENT "(" args:!(Util.list0 arg) ")" "begin" s:!(Stmt.parse) "end" {
+        (FunName n, Fun (args, s))
+      };
+
+    arg: IDENT
   )
 
 end
