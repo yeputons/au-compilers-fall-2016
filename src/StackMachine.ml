@@ -9,6 +9,7 @@ open GT
         | S_LABEL of string
         | S_JMP   of string
         | S_JZ    of string
+        | S_COMM  of string
       with show
 
 let i_to_string = show(i)
@@ -59,6 +60,8 @@ struct
              (state, (eval_binop s l r)::stack')
            | S_LABEL s ->
              (state, stack)
+           | S_COMM _ ->
+             (state, stack)
           )
           (iptr + 1)
     in
@@ -84,35 +87,56 @@ struct
       Printf.sprintf "lbl_%d" !last_lbl_id
     in
     let rec stmt' = function
-    | Skip          -> [||]
-    | Assign (x, e) -> Array.append (expr e) [|S_ST x|]
-    | Read    x     -> [|S_READ; S_ST x|]
-    | Write   e     -> Array.append (expr e) [|S_WRITE|]
+    | Skip          -> [|S_COMM "skip"|]
+    | Assign (x, e) -> Array.concat [
+        [|S_COMM (x ^ " := " ^ (t_to_string e))|];
+        expr e;
+        [|S_ST x|]
+      ]
+    | Read    x     -> [|
+        S_COMM ("read(" ^ x ^ ")");
+        S_READ;
+        S_ST x
+      |]
+    | Write   e     -> Array.concat [
+        [|S_COMM ("write(" ^ (t_to_string e) ^ ")")|];
+        expr e;
+        [|S_WRITE|];
+      ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
     | If     (c, t, f) ->
       let lbl_else = next_lbl () in
       let lbl_end = next_lbl () in
       Array.concat [
+        [|S_COMM ("if " ^ (t_to_string c))|];
         expr c; [|S_JZ lbl_else|];
+        [|S_COMM "then {"|];
         stmt' t; [|S_JMP lbl_end|];
+        [|S_COMM "} else {"|];
         [|S_LABEL lbl_else|];
         stmt' f;
-        [|S_LABEL lbl_end|]
+        [|S_COMM "}"|];
+        [|S_LABEL lbl_end|];
       ]
     | While  (c, s) ->
       let lbl_begin = next_lbl() in
       let lbl_end = next_lbl() in
       Array.concat [
+        [|S_COMM ("while " ^ (t_to_string c))|];
         [|S_LABEL lbl_begin|];
         expr c; [|S_JZ lbl_end|];
+        [|S_COMM "do {"|];
         stmt' s; [|S_JMP lbl_begin|];
+        [|S_COMM "}"|];
         [|S_LABEL lbl_end|];
       ]
     | Until (s, c) ->
       let lbl_begin = next_lbl() in
       Array.concat [
+        [|S_COMM "repeat {"|];
         [|S_LABEL lbl_begin|];
         stmt' s;
+        [|S_COMM ("} until " ^ (t_to_string c))|];
         expr c; [|S_JZ lbl_begin|];
       ]
     in

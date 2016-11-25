@@ -116,6 +116,8 @@ struct
     let rec compile stack code =
       match code with
       | []       -> []
+      | (S_COMM c)::code' ->
+        [X86Comm ("===== " ^ c ^ " =====")] @ compile stack code'
       | i::code' ->
         let (stack', x86code) =
           match i with
