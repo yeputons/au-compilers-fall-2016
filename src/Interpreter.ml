@@ -21,21 +21,22 @@ struct
   let eval reader writer stmt =
     let rec eval' state stmt =
       let var_get x = List.assoc x state in
+      let expr_eval = Expr.eval var_get in
       match stmt with
       | Skip          -> state
       | Seq    (l, r) -> eval' (eval' state l) r
-      | Assign (x, e) -> (x, Expr.eval var_get e) :: state
+      | Assign (x, e) -> (x, expr_eval e) :: state
       | Write   e     ->
-        writer (Expr.eval var_get e);
+        writer (expr_eval e);
         state
       | Read    x     ->
         let y = reader () in
         (x, y) :: state
       | If (e, s1, s2) ->
-        let v = Expr.eval var_get e in
+        let v = expr_eval e in
         eval' state (if v <> 0 then s1 else s2)
       | While (e, s) ->
-        let v = Expr.eval var_get e in
+        let v = expr_eval e in
         if v <> 0 then
           eval' (eval' state s) stmt
         else
@@ -43,7 +44,8 @@ struct
       | Until (s, e) ->
         let state = eval' state s in
         let var_get x = List.assoc x state in
-        let v = Expr.eval var_get e in
+        let expr_eval = Expr.eval var_get in
+        let v = expr_eval e in
         if v = 0 then
           eval' state stmt
         else
