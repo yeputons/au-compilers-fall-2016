@@ -14,6 +14,15 @@ open GT
 
 let i_to_string = show(i)
 
+module S = Set.Make(String)
+
+let used_vars code =
+  let add_var i s = match i with
+    | S_LD x | S_ST x -> S.add x s
+    | _ -> s
+  in
+  S.elements @@ Array.fold_right add_var code S.empty
+
 module Interpreter =
 struct
   open Language.Expr
