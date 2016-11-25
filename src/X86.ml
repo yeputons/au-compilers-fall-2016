@@ -234,7 +234,9 @@ let compile stmt =
   in
   !"main:";
   prologue();
+  !"// ===== START =====";
   List.iter (fun i -> !(Show.instr i)) code;
+  !"// ===== END =====";
   epilogue();
   !"\txorl\t%eax,\t%eax";
   !"\tret";
