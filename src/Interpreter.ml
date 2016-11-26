@@ -1,3 +1,5 @@
+open Util
+
 module Expr =
 struct
 
@@ -11,7 +13,7 @@ struct
       let rv = eval funs var_get r in
       eval_binop op lv rv
     | FunCall (fname, args) ->
-      (List.assoc fname funs) (List.map (eval funs var_get) args)
+      (assoc_err fname funs "Function '%s' not found") (List.map (eval funs var_get) args)
 
 end
 
@@ -83,7 +85,11 @@ struct
     let fun_transform = function
       | (FunName name, Fun (arg_names, body)) ->
         let fun_eval stmt_eval arg_vals =
-          assert (List.length arg_names == List.length arg_vals);
+          if (List.length arg_names != List.length arg_vals) then
+            failwith @@ Printf.sprintf "Invalid number of arguments for function '%s': expected %d, found %d"
+              name (List.length arg_names) (List.length arg_vals)
+          else
+            ();
           let vars = (List.map2 (fun a b -> (a, b)) arg_names arg_vals) in
           let (Returned res) = stmt_eval (Computing vars) body in
           res

@@ -6,3 +6,8 @@ let rec splitAt n l =
   else
     ([], l)
 
+let assoc_err x l e =
+  try
+    List.assoc x l
+  with
+  | Not_found -> failwith @@ Printf.sprintf e x

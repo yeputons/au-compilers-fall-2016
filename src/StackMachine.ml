@@ -68,14 +68,15 @@ struct
            (function i -> function (S_LABEL x) -> [(x, i)] | _ -> [])
            (Array.to_list code))
     in
+    let get_lbl lbl = assoc_err lbl labels "Label '%s' not found" in
     let rec run' (state, stack) iptr allowed_vars =
       if iptr >= Array.length code then
         failwith "Should not reach end of the code"
       else
         match code.(iptr) with
-        | S_JMP lbl -> run' (state, stack) (List.assoc lbl labels) allowed_vars
+        | S_JMP lbl -> run' (state, stack) (get_lbl lbl) allowed_vars
         | S_RET lbl ->
-          let iptr' = List.assoc lbl labels in
+          let iptr' = get_lbl lbl in
           (match code.(iptr' + 1) with
             | S_FUN_END -> ()
             | _         -> failwith "Non-S_FUN_END after S_RET's label"
@@ -86,7 +87,7 @@ struct
           let x::stack' = stack in
           let iptr' =
             if (x = 0)
-            then (List.assoc lbl labels)
+            then (get_lbl lbl)
             else (iptr + 1) in
           run' (state, stack') iptr' allowed_vars
         | S_FUN_BEGIN {args; locals; _} ->
@@ -125,7 +126,7 @@ struct
            | S_COMM _ ->
              (state, stack)
            | S_CALL (lbl, args_cnt) ->
-             let iptr' = List.assoc lbl labels in
+             let iptr' = get_lbl lbl in
              let (args, stack') = splitAt args_cnt stack in
              let (_, [res]) = run' ([], args) iptr' [] in
              (state, res::stack')
@@ -133,7 +134,7 @@ struct
           (iptr + 1)
           allowed_vars
     in
-    let (_, [ret]) = run' ([], []) (List.assoc "main" labels) [] in
+    let (_, [ret]) = run' ([], []) (get_lbl "main") [] in
     ()
 end
 
@@ -156,21 +157,35 @@ struct
   open Language.Stmt
   open Language.Prog
 
-  let rec expr = function
+  type ft = UserFun | Builtin
+
+  let expr funs =
+    let rec expr' = function
     | Var   x -> [|S_LD   x|]
     | Const n -> [|S_PUSH n|]
-    | Binop (s, x, y) -> Array.concat [expr x; expr y; [|S_BINOP s|]]
+    | Binop (s, x, y) -> Array.concat [expr' x; expr' y; [|S_BINOP s|]]
     | FunCall (name, args) -> Array.concat [
-        Array.concat @@ List.map expr args;
-        [|S_CALL ("fun_" ^ name, List.length args)|];
+        Array.concat @@ List.map expr' args;
+        let (args_cnt, f) = assoc_err name funs "Function '%s' not found" in
+        if not (args_cnt == List.length args) then
+          failwith @@ Printf.sprintf "Invalid number of arguments for function '%s': expected %d, found %d"
+            name args_cnt (List.length args)
+        else
+          let lbl = match f with
+            | UserFun     -> "fun_" ^ name
+          in
+          [|S_CALL (lbl, args_cnt)|]
       ]
+    in
+    expr'
 
-  let stmt env =
+  let stmt env funs =
+    let expr' = expr funs in
     let rec stmt' = function
     | Skip          -> [|S_COMM "skip"|]
     | Assign (x, e) -> Array.concat [
         [|S_COMM (x ^ " := " ^ (t_to_string e))|];
-        expr e;
+        expr' e;
         [|S_ST x|]
       ]
     | Read    x     -> [|
@@ -180,7 +195,7 @@ struct
       |]
     | Write   e     -> Array.concat [
         [|S_COMM ("write(" ^ (t_to_string e) ^ ")")|];
-        expr e;
+        expr' e;
         [|S_WRITE|];
       ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
@@ -189,7 +204,7 @@ struct
       let lbl_end = env#next_lbl in
       Array.concat [
         [|S_COMM ("if " ^ (t_to_string c))|];
-        expr c; [|S_JZ lbl_else|];
+        expr' c; [|S_JZ lbl_else|];
         [|S_COMM "then {"|];
         stmt' t; [|S_JMP lbl_end|];
         [|S_COMM "} else {"|];
@@ -204,7 +219,7 @@ struct
       Array.concat [
         [|S_COMM ("while " ^ (t_to_string c))|];
         [|S_LABEL lbl_begin|];
-        expr c; [|S_JZ lbl_end|];
+        expr' c; [|S_JZ lbl_end|];
         [|S_COMM "do {"|];
         stmt' s; [|S_JMP lbl_begin|];
         [|S_COMM "}"|];
@@ -217,13 +232,13 @@ struct
         [|S_LABEL lbl_begin|];
         stmt' s;
         [|S_COMM ("} until " ^ (t_to_string c))|];
-        expr c; [|S_JZ lbl_begin|];
+        expr' c; [|S_JZ lbl_begin|];
       ]
-    | Ignore (e) -> Array.append (expr e) [|S_DROP|]
+    | Ignore (e) -> Array.append (expr' e) [|S_DROP|]
     | Return (e) ->
       Array.concat [
         [|S_COMM ("return " ^ (t_to_string e))|];
-        expr e;
+        expr' e;
         [|S_RET env#cur_end_lbl|];
       ]
     in
@@ -231,10 +246,15 @@ struct
 
   let prog (p:t) : i array =
     let env = new smenv in
+    let funs = List.flatten @@ List.map (function
+        | (FunName name, Fun (args, _)) -> [(name, (List.length args, UserFun))]
+        | (ProgBody, _) -> []
+      ) p
+    in
     let comp_fun : f -> i array  = function
       | Fun (args, body) ->
         let lbl_end = env#next_end_lbl in
-        let body = stmt env body in
+        let body = stmt env funs body in
         let locals = S.elements @@ S.diff (S.of_list (used_vars body)) (S.of_list args) in
         let max_stack = max_stack body in
         Array.concat [
