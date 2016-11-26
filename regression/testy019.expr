@@ -1,0 +1,6 @@
+fun foo(x) begin
+  write(x);
+  write(x);
+  return 0
+end
+foo(2+2)
