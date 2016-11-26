@@ -219,7 +219,7 @@ struct
         [|S_COMM ("} until " ^ (t_to_string c))|];
         expr c; [|S_JZ lbl_begin|];
       ]
-    | Ignore (e) -> expr e
+    | Ignore (e) -> Array.append (expr e) [|S_DROP|]
     | Return (e) ->
       Array.concat [
         [|S_COMM ("return " ^ (t_to_string e))|];

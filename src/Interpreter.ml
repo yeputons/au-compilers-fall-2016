@@ -37,6 +37,7 @@ struct
         | Skip          -> state
         | Seq    (l, r) -> eval' (eval' state l) r
         | Assign (x, e) -> Computing ((x, expr_eval e)::vars)
+        | Ignore  e     -> ignore @@ expr_eval e; Computing vars
         | Return  e     -> Returned (expr_eval e)
         | Write   e     ->
           writer (expr_eval e);
