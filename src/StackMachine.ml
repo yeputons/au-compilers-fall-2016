@@ -2,8 +2,6 @@ open GT
 open Util
      @type fhead  = {args:string list; locals:string list; max_stack:int} with show
      @type i =
-        | S_READ
-        | S_WRITE
         | S_PUSH  of int
         | S_LD    of string
         | S_ST    of string
@@ -32,8 +30,6 @@ let used_vars code =
 
 let max_stack code =
   let stack_change = function
-    | S_READ    -> (0, true)
-    | S_WRITE   -> (1, false)
     | S_PUSH  _ -> (0, true)
     | S_LD    _ -> (0, true)
     | S_ST    _ -> (1, false)
@@ -61,7 +57,7 @@ module Interpreter =
 struct
   open Language.Expr
 
-  let run reader writer code =
+  let run code =
     let labels =
       List.concat
         (List.mapi
@@ -99,13 +95,6 @@ struct
         | _ ->
         run'
           (match code.(iptr) with
-           | S_READ ->
-             let y = reader () in
-             (state, y::stack)
-           | S_WRITE ->
-             let y::stack' = stack in
-             writer y;
-             (state, stack')
            | S_PUSH n ->
              (state, n::stack)
            | S_LD x ->
@@ -126,9 +115,16 @@ struct
            | S_COMM _ ->
              (state, stack)
            | S_CALL (lbl, args_cnt) ->
-             let iptr' = get_lbl lbl in
              let (args, stack') = splitAt args_cnt stack in
-             let (_, [res]) = run' ([], args) iptr' [] in
+             let res =
+               if List.mem_assoc lbl labels then
+                 let iptr' = get_lbl lbl in
+                 let (_, [res]) = run' ([], args) iptr' [] in
+                 res
+               else
+                 let f = assoc_err lbl Runtime.builtins_impl "Builtin function '%s' not found" in
+                 f args
+             in
              (state, res::stack')
           )
           (iptr + 1)
@@ -172,7 +168,8 @@ struct
             name args_cnt (List.length args)
         else
           let lbl = match f with
-            | UserFun     -> "fun_" ^ name
+            | UserFun -> "fun_" ^ name
+            | Builtin -> name
           in
           [|S_CALL (lbl, args_cnt)|]
       ]
@@ -187,16 +184,6 @@ struct
         [|S_COMM (x ^ " := " ^ (t_to_string e))|];
         expr' e;
         [|S_ST x|]
-      ]
-    | Read    x     -> [|
-        S_COMM ("read(" ^ x ^ ")");
-        S_READ;
-        S_ST x
-      |]
-    | Write   e     -> Array.concat [
-        [|S_COMM ("write(" ^ (t_to_string e) ^ ")")|];
-        expr' e;
-        [|S_WRITE|];
       ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
     | If     (c, t, f) ->
@@ -248,8 +235,9 @@ struct
     let env = new smenv in
     let funs = List.flatten @@ List.map (function
         | (FunName name, Fun (args, _)) -> [(name, (List.length args, UserFun))]
+        | (FunName name, Builtin args)  -> [(name, (args, Builtin))]
         | (ProgBody, _) -> []
-      ) p
+      ) (p @ Runtime.builtins)
     in
     let comp_fun : f -> i array  = function
       | Fun (args, body) ->

@@ -75,8 +75,6 @@ struct
 
   type t =
     | Skip
-    | Read   of string
-    | Write  of Expr.t
     | Assign of string * Expr.t
     | Seq    of t * t
     | If     of Expr.t * t * t
@@ -85,7 +83,7 @@ struct
     | Ignore of Expr.t
     | Return of Expr.t
 
-  let keywords = ["read"; "write"; "skip"; "return"; "if"; "then"; "elif"; "else"; "fi"; "while"; "do"; "od"; "repeat"; "until"; "for"]
+  let keywords = ["skip"; "return"; "if"; "then"; "elif"; "else"; "fi"; "while"; "do"; "od"; "repeat"; "until"; "for"]
 
   ostap (
     parse: s:simple d:(-";" parse)? {
@@ -100,8 +98,6 @@ struct
                 }
               )
       { res }
-    | %"read"  "(" x:IDENT ")"         {Read x}
-    | %"write" "(" e:!(Expr.parse) ")" {Write e}
     | %"skip"                          {Skip}
     | %"return" e:!(Expr.parse)        {Return e}
     | %"if" e1:!(Expr.parse) "then" s1:parse
@@ -127,7 +123,7 @@ end
 module Prog =
 struct
   type fname = FunName of string | ProgBody
-  type f = Fun of string list * Stmt.t
+  type f = Fun of string list * Stmt.t | Builtin of int
   type t = (fname * f) list
 
   let keywords = Stmt.keywords @ ["fun"; "begin"; "end"]

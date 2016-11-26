@@ -27,7 +27,7 @@ struct
     | Computing of (string * int) list
     | Returned  of int
 
-  let eval reader writer funs stmt =
+  let eval funs stmt =
     let rec eval' (state:t_state) (stmt:t) : t_state =
       let funs = List.map (fun (name, fun_eval) -> (name, fun_eval eval')) funs in
       match state with
@@ -41,12 +41,6 @@ struct
         | Assign (x, e) -> Computing ((x, expr_eval e)::vars)
         | Ignore  e     -> ignore @@ expr_eval e; Computing vars
         | Return  e     -> Returned (expr_eval e)
-        | Write   e     ->
-          writer (expr_eval e);
-          state
-        | Read    x     ->
-          let y = reader () in
-          Computing ((x, y)::vars)
         | If (e, s1, s2) ->
           let v = expr_eval e in
           eval' state (if v <> 0 then s1 else s2)
@@ -80,23 +74,30 @@ struct
   open Stmt
   open Language.Prog
 
-  let eval reader writer prog =
+  let eval prog =
     let Fun ([], body) = List.assoc ProgBody prog in
     let fun_transform = function
-      | (FunName name, Fun (arg_names, body)) ->
+      | (FunName name, impl) ->
         let fun_eval stmt_eval arg_vals =
-          if (List.length arg_names != List.length arg_vals) then
+          let args_cnt = match impl with
+            | Fun (arg_names, body) -> List.length arg_names
+            | Builtin x -> x
+          in
+          if (args_cnt != List.length arg_vals) then
             failwith @@ Printf.sprintf "Invalid number of arguments for function '%s': expected %d, found %d"
-              name (List.length arg_names) (List.length arg_vals)
+              name args_cnt (List.length arg_vals)
           else
-            ();
-          let vars = (List.map2 (fun a b -> (a, b)) arg_names arg_vals) in
-          let (Returned res) = stmt_eval (Computing vars) body in
-          res
+            match impl with
+            | Fun (arg_names, body) ->
+              let vars = (List.combine arg_names arg_vals) in
+              let (Returned res) = stmt_eval (Computing vars) body in
+              res
+            | Builtin _ ->
+              (List.assoc name Runtime.builtins_impl) arg_vals
         in
         [(name, fun_eval)]
-      | _ -> []
+      | (ProgBody, _) -> []
     in
-    let funs = List.flatten @@ List.map fun_transform prog in
-    Stmt.eval reader writer funs body
+    let funs = List.flatten @@ List.map fun_transform (prog @ Runtime.builtins) in
+    Stmt.eval funs body
 end

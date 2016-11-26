@@ -128,17 +128,6 @@ struct
       | i::code' ->
         let (stack', x86code) =
           match i with
-          | S_READ   ->
-            let s = allocate env stack in
-            assert (stack = []);
-            (s::stack, [X86Call "read"; X86Binop (Mov, eax, s)])
-          | S_WRITE  ->
-            let s::stack' = stack in
-            assert (stack' = []);
-            (stack', match s with
-              | S 0 -> [X86Call "write"]
-              | _   -> [X86Push s; X86Call "write"; X86Pop eax]
-            )
           | S_PUSH n ->
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, L n, s)])
