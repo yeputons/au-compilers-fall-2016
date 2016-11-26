@@ -5,9 +5,9 @@ fun fac(n) begin
      return n * fac(n - 1)
   fi
 end
-read(tn);
+tn := read();
 while tn > 0 do
-  read(x);
+  x := read();
   write(fac(x));
   tn := tn - 1
 od

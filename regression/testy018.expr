@@ -8,5 +8,5 @@ fun foo(n) begin
   return res
 end
 
-read(x);
+x := read();
 write(foo(x))

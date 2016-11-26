@@ -13,9 +13,9 @@ fun fib(n) begin
   return b
 end
 
-read(x);
+x := read();
 while x > 0 do
   write(fib(x));
-  read(x)
+  x := read()
 od
 
