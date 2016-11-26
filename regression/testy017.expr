@@ -1,0 +1,12 @@
+fun foo(n) begin
+  if n == 0 then
+    return 1
+  fi;
+  n := n - 1;
+  res := foo(n) + foo(n) + foo(n) + foo(n) +
+         foo(n) + foo(n) + foo(n) + foo(n);
+  return res
+end
+
+read(x);
+write(foo(x))
