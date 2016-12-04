@@ -1,0 +1,4 @@
+fun foo(a, b) begin
+    return a * 10 + b
+end
+write(foo(3, 4))

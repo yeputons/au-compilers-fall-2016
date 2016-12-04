@@ -161,7 +161,7 @@ struct
     | Const n -> [|S_PUSH n|]
     | Binop (s, x, y) -> Array.concat [expr' x; expr' y; [|S_BINOP s|]]
     | FunCall (name, args) -> Array.concat [
-        Array.concat @@ List.map expr' args;
+        Array.concat @@ List.map expr' @@ List.rev args;
         let (args_cnt, f) = assoc_err name funs "Function '%s' not found" in
         if not (args_cnt == List.length args) then
           failwith @@ Printf.sprintf "Invalid number of arguments for function '%s': expected %d, found %d"
