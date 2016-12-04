@@ -1,6 +1,6 @@
 open Util
 
-type opnd = R of int | S of int | A of int | L of int
+type opnd = R of int | S of int | A of int | L of int | D of string
 
 let x86regs = [|
   "%ebx";
@@ -96,6 +96,7 @@ struct
     | S i -> Printf.sprintf "%d(%%ebp)" ((-regs_under_ebp - i - 1) * word_size)
     | A i -> Printf.sprintf "%d(%%ebp)" ((i+2) * word_size) (* +0 - old ebp, +1 - return address, +2 - args *)
     | L i -> Printf.sprintf "$%d" i
+    | D s -> Printf.sprintf "$%s" s
 
   let instr = function
     | X86Binop (o, s1, s2) -> Printf.sprintf "\t%s\t%s,\t%s"
@@ -119,7 +120,14 @@ struct
 
   open StackMachine
 
-  let stack_program env code =
+  let collect_strs code : string list =
+    let add_str i s = match i with
+      | S_SPUSH str -> S.add str s
+      | _ -> s
+    in
+    S.elements @@ Array.fold_right add_str code S.empty
+
+  let stack_program env strs code =
     let rec compile stack code =
       match code with
       | []       -> []
@@ -131,6 +139,9 @@ struct
           | S_PUSH n ->
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, L n, s)])
+          | S_SPUSH c ->
+            let s = allocate env stack in
+            (s::stack, [X86Binop (Mov, D (List.assoc c strs), s)])
           | S_LD x   ->
             let x' = env#get_var x in
             let s = allocate env stack in
@@ -253,10 +264,21 @@ end
 let compile prog =
   let env = new x86env in
   let smcode = StackMachine.Compile.prog prog in
-  let code = Compile.stack_program env @@ Array.to_list @@ smcode in
+  let strs = List.mapi
+      (fun i s -> (s, Printf.sprintf "str_%d" i))
+      (Compile.collect_strs smcode)
+  in
+  let code = Compile.stack_program env strs @@ Array.to_list @@ smcode in
   let asm  = Buffer.create 1024 in
   let (!!) s = Buffer.add_string asm s in
   let (!)  s = !!s; !!"\n" in
+  !"\t.data";
+  List.iter (fun (s, n) ->
+      !(Printf.sprintf "%s:" n);
+      !(Printf.sprintf "\t.int 0 # Box.BoxType = STR");
+      !(Printf.sprintf "\t.int %d # Box.str.len" (Bytes.length s));
+      !(Printf.sprintf "\t.asciz \"%s\"" s)
+    ) strs;
   !"\t.text";
   !"\t.globl\tmain";
   List.iter (fun i -> !(Show.instr i)) code;
