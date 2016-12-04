@@ -1,4 +1,4 @@
-TESTS_STACK=
+TESTS_STACK=testy020
 TESTS_INTERPRET=
 TESTS_IGNORE=
 TESTS_ORIG=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET) $(TESTS_IGNORE), $(sort $(basename $(wildcard test???.expr))))

@@ -1,0 +1,5 @@
+write('4' - '0');
+a := "hello";
+b := "world";
+writes(a);
+writes(b)

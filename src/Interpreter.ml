@@ -20,12 +20,13 @@ end
 module Stmt =
 struct
 
+  open Language.Value
   open Language.Prog
   open Language.Stmt
 
   type t_state =
-    | Computing of (string * int) list
-    | Returned  of int
+    | Computing of (string * Language.Value.t) list
+    | Returned  of Language.Value.t
 
   let eval funs stmt =
     let rec eval' (state:t_state) (stmt:t) : t_state =
@@ -42,10 +43,10 @@ struct
         | Ignore  e     -> ignore @@ expr_eval e; Computing vars
         | Return  e     -> Returned (expr_eval e)
         | If (e, s1, s2) ->
-          let v = expr_eval e in
+          let (Int v) = expr_eval e in
           eval' state (if v <> 0 then s1 else s2)
         | While (e, s) ->
-          let v = expr_eval e in
+          let (Int v) = expr_eval e in
           if v <> 0 then
             eval' (eval' state s) stmt
           else
@@ -57,7 +58,7 @@ struct
           | Computing vars ->
             let var_get x = List.assoc x vars in
             let expr_eval = Expr.eval funs var_get in
-            let v = expr_eval e in
+            let (Int v) = expr_eval e in
             if v = 0 then
               eval' state stmt
             else

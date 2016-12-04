@@ -3,6 +3,7 @@ open Util
      @type fhead  = {args:string list; locals:string list; max_stack:int} with show
      @type i =
         | S_PUSH  of int
+        | S_SPUSH of string
         | S_LD    of string
         | S_ST    of string
         | S_DROP
@@ -31,6 +32,7 @@ let used_vars code =
 let max_stack code =
   let stack_change = function
     | S_PUSH  _ -> (0, true)
+    | S_SPUSH _ -> (0, true)
     | S_LD    _ -> (0, true)
     | S_ST    _ -> (1, false)
     | S_DROP    -> (1, false)
@@ -55,6 +57,7 @@ let max_stack code =
 
 module Interpreter =
 struct
+  open Language.Value
   open Language.Expr
 
   let run code =
@@ -80,7 +83,7 @@ struct
           let [y] = stack in
           (state, stack)
         | S_JZ lbl ->
-          let x::stack' = stack in
+          let (Int x)::stack' = stack in
           let iptr' =
             if (x = 0)
             then (get_lbl lbl)
@@ -96,7 +99,9 @@ struct
         run'
           (match code.(iptr) with
            | S_PUSH n ->
-             (state, n::stack)
+             (state, (Int n)::stack)
+           | S_SPUSH s ->
+             (state, (Str s)::stack)
            | S_LD x ->
              assert (List.mem x allowed_vars);
              (state, (List.assoc x state)::stack)
@@ -158,7 +163,8 @@ struct
   let expr funs =
     let rec expr' = function
     | Var   x -> [|S_LD   x|]
-    | Const n -> [|S_PUSH n|]
+    | Const (Int n) -> [|S_PUSH n|]
+    | Const (Str s) -> [|S_SPUSH s|]
     | Binop (s, x, y) -> Array.concat [expr' x; expr' y; [|S_BINOP s|]]
     | FunCall (name, args) -> Array.concat [
         Array.concat @@ List.map expr' @@ List.rev args;

@@ -1,11 +1,23 @@
 open Ostap
 open Matcher
 
+module Value =
+struct
+  type t =
+    | Int   of int
+    | Str   of bytes
+
+  let t_to_string = function
+    | Int c -> Printf.sprintf "%d" c
+    | Str c -> Printf.sprintf "\"%s\"" c
+end
+
 module Expr =
 struct
+  open Value
 
   type t =
-    | Const   of int
+    | Const   of Value.t
     | Var     of string
     | Binop   of string * t * t
     | FunCall of string * t list
@@ -14,14 +26,14 @@ struct
   let itb i = i <> 0
 
   let rec t_to_string = function
-    | Const c  -> string_of_int c
+    | Const c -> Value.t_to_string c
     | Var name -> name
     | Binop (op, a, b) -> Printf.sprintf "(%s %s %s)" (t_to_string a) op (t_to_string b)
     | FunCall (name, args) ->
       let args_str = List.map t_to_string args in
       Printf.sprintf "%s(%s)" name (String.concat ", " args_str)
 
-  let eval_binop s x y =
+  let eval_binop s (Int x) (Int y) = Int (
     match s with
     | "+" -> x + y
     | "-" -> x - y
@@ -38,6 +50,7 @@ struct
       | "&&" -> itb x && itb y
       | "!!" -> itb x || itb y
       )
+    )
 
   ostap (
     parse:
@@ -59,7 +72,9 @@ struct
             primary);
 
     primary:
-      n:DECIMAL {Const n}
+      n:DECIMAL {Const (Int n)}
+    | s:STRING {Const (Str (Bytes.sub s 1 (Bytes.length s - 2)))}
+    | c:CHAR {Const (Int (Char.code c))}
     | x:IDENT call:(-"(" !(Util.list0 parse) -")")? {
       match call with
       | Some (args) -> FunCall(x, args)
@@ -146,6 +161,8 @@ struct
         inherit Matcher.t s
         inherit Util.Lexers.ident keywords s
         inherit Util.Lexers.decimal s
+        inherit Util.Lexers.string s
+        inherit Util.Lexers.char s
         inherit Util.Lexers.skip [
             Matcher.Skip.whitespaces " \t\n";
             Matcher.Skip.lineComment "--";
