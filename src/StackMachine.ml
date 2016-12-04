@@ -237,7 +237,7 @@ struct
         | (FunName name, Fun (args, _)) -> [(name, (List.length args, UserFun))]
         | (FunName name, Builtin args)  -> [(name, (args, Builtin))]
         | (ProgBody, _) -> []
-      ) (p @ Runtime.builtins)
+      ) (p @ Runtime.builtins_fun)
     in
     let comp_fun : f -> i array  = function
       | Fun (args, body) ->

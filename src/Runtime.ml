@@ -1,18 +1,15 @@
 open Language.Prog
 
-let read [] =
-  Printf.printf "> ";
-  read_int ()
-
-let write [x] =
-  Printf.printf "%d\n" x;
-  0
-
-let builtins = [
-  (FunName "read", Builtin 0);
-  (FunName "write", Builtin 1)
+let builtins : (string * int * (int list -> int)) list = [
+  ("read", 0, fun [] ->
+      Printf.printf "> ";
+      read_int ()
+  );
+  ("write", 1, fun [v] ->
+      Printf.printf "%d\n" v;
+      0
+  )
 ]
-let builtins_impl = [
-  ("read", read);
-  ("write", write)
-]
+
+let builtins_fun = List.map (fun (n, a, _) -> (FunName n, Builtin a)) builtins
+let builtins_impl = List.map (fun (n, _, f) -> (n, f)) builtins

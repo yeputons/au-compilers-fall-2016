@@ -98,6 +98,6 @@ struct
         [(name, fun_eval)]
       | (ProgBody, _) -> []
     in
-    let funs = List.flatten @@ List.map fun_transform (prog @ Runtime.builtins) in
+    let funs = List.flatten @@ List.map fun_transform (prog @ Runtime.builtins_fun) in
     Stmt.eval funs body
 end
