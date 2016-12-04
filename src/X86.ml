@@ -107,7 +107,7 @@ struct
     | X86Pop  s       -> Printf.sprintf "\tpopl\t%s"       (opnd s )
     | X86Ret          -> "\tret"
     | X86Call p       -> Printf.sprintf "\tcall\t%s" p
-    | X86Comm s       -> Printf.sprintf "// %s" s
+    | X86Comm s       -> Printf.sprintf "# %s" s
     | X86Lbl  l       -> Printf.sprintf "%s:" l
     | X86Jmp  l       -> Printf.sprintf "\tjmp\t%s" l
     | X86Jz   l       -> Printf.sprintf "\tjz\t%s" l
