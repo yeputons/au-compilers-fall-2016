@@ -1,29 +1,29 @@
 a := "hello";
-writes(a);
+writeb(a);
 write(strlen(a));
 b := strmake(8, 'x');
-writes(b);
+writeb(b);
 write(strlen(b));
 c := strset(a, 1, 'a');
-writes(c);
-writes(a);
+writeb(c);
+writeb(a);
 write(strget(a, 1));
 
 c := strdup(a);
-writes(c);
+writeb(c);
 d := strset(c, 1, 'e');
-writes(d);
-writes(c);
-writes(a);
+writeb(d);
+writeb(c);
+writeb(a);
 d := strset(a, 1, 'x');
-writes(d);
-writes(a);
-writes(c);
+writeb(d);
+writeb(a);
+writeb(c);
 
-writes(strcat("foo", "bar"));
+writeb(strcat("foo", "bar"));
 x := strsub(a, 1, 2);
-writes(x);
+writeb(x);
 d := strset(x, 0, 'f');
-writes(d);
-writes(x);
-writes(a)
+writeb(d);
+writeb(x);
+writeb(a)

@@ -10,7 +10,7 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
       Printf.printf "%d\n" v;
       Int 0
   );
-  ("writes", 1, fun [Str v] ->
+  ("writeb", 1, fun [Str v] ->
       Printf.printf "%s\n" v;
       Int 0
   );
