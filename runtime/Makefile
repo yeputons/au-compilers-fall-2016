@@ -3,7 +3,7 @@
 all: runtime.o
 
 %.o: %.c
-	gcc -m32 -c $^ -o $@
+	gcc -m32 -c $^ -o $@ -std=c99
 
 clean:
 	rm -f runtime.o *~
