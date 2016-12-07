@@ -175,7 +175,7 @@ struct
         else
           let lbl = match f with
             | UserFun -> "fun_" ^ name
-            | Builtin -> name
+            | Builtin -> "bi_" ^ name
           in
           [|S_CALL (lbl, args_cnt)|]
       ]

@@ -94,7 +94,7 @@ struct
               let (Returned res) = stmt_eval (Computing vars) body in
               res
             | Builtin _ ->
-              (List.assoc name Runtime.builtins_impl) arg_vals
+              (List.assoc ("bi_" ^ name) Runtime.builtins_impl) arg_vals
         in
         [(name, fun_eval)]
       | (ProgBody, _) -> []

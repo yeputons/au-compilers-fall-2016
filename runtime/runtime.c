@@ -15,18 +15,18 @@ typedef struct Box {
   char data[];
 } Box;
 
-extern int read () {
+extern int bi_read () {
   int d;
   printf ("> ");
   scanf ("%d", &d);
   return d;
 }
 
-extern void write (int x) {
+extern void bi_write (int x) {
   printf ("%d\n", x);
 }
 
-extern void writeb (Box *v) {
+extern void bi_writeb (Box *v) {
   assert(v->type == STR);
   fwrite (v->data, 1, v->str.len, stdout);
   printf ("\n");
