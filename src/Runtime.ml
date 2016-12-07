@@ -20,6 +20,7 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
   ("strdup", 1, fun [Str s] -> Str (Bytes.copy s));
   ("strcat", 2, fun [Str s1; Str s2] -> Str (Bytes.concat "" [s1; s2]));
   ("strcmp", 2, fun [Str s1; Str s2] ->
+                    (* TODO: see X86.ml: what type of bytes does Bytes.compare compare? *)
                     let res = Bytes.compare s1 s2 in
                     match res with
                     | 0 -> Int 0
