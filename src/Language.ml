@@ -72,7 +72,9 @@ struct
             primary);
 
     primary:
-      n:DECIMAL {Const (Int n)}
+      "true" {Const (Int 1)}
+    | "false" {Const (Int 0)}
+    | n:DECIMAL {Const (Int n)}
     | s:STRING {Const (Str (Bytes.sub s 1 (Bytes.length s - 2)))}
     | c:CHAR {Const (Int (Char.code c))}
     | x:IDENT call:(-"(" !(Util.list0 parse) -")")? {
