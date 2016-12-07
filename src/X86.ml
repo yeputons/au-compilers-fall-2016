@@ -78,7 +78,7 @@ class x86env =
 
     val mutable vars : (string * opnd) list = []
     method set_vars l = vars <- l
-    method get_var x = List.assoc x vars
+    method get_var x = assoc_err x vars "Variable '%s' not found"
   end
 
 let allocate env stack =
@@ -141,7 +141,7 @@ struct
             (s::stack, [X86Binop (Mov, L n, s)])
           | S_SPUSH c ->
             let s = allocate env stack in
-            (s::stack, [X86Binop (Mov, D (List.assoc c strs), s)])
+            (s::stack, [X86Binop (Mov, D (assoc_err c strs "String const '%s' not found"), s)])
           | S_LD x   ->
             let x' = env#get_var x in
             let s = allocate env stack in

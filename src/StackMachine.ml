@@ -104,7 +104,7 @@ struct
              (state, (Str s)::stack)
            | S_LD x ->
              assert (List.mem x allowed_vars);
-             (state, (List.assoc x state)::stack)
+             (state, (assoc_err x state "Variable '%s' not found")::stack)
            | S_ST x ->
              assert (List.mem x allowed_vars);
              let y::stack' = stack in

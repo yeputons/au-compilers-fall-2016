@@ -34,7 +34,7 @@ struct
       match state with
       | Returned x -> Returned x
       | Computing vars ->
-        let var_get x = List.assoc x vars in
+        let var_get x = assoc_err x vars "Variable '%s' not found" in
         let expr_eval = Expr.eval funs var_get in
         match stmt with
         | Skip          -> state
@@ -56,7 +56,7 @@ struct
           match state with
           | Returned x -> Returned x
           | Computing vars ->
-            let var_get x = List.assoc x vars in
+            let var_get x = assoc_err x vars "Variable '%s' not found" in
             let expr_eval = Expr.eval funs var_get in
             let (Int v) = expr_eval e in
             if v = 0 then
@@ -94,7 +94,7 @@ struct
               let (Returned res) = stmt_eval (Computing vars) body in
               res
             | Builtin _ ->
-              (List.assoc ("bi_" ^ name) Runtime.builtins_impl) arg_vals
+              (assoc_err ("bi_" ^ name) Runtime.builtins_impl "Builtin function '%s' not found") arg_vals
         in
         [(name, fun_eval)]
       | (ProgBody, _) -> []
