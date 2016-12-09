@@ -5,15 +5,18 @@ struct
 
   open Language.Expr
 
-  let rec eval funs var_get = function
+  let eval funs var_get e =
+    let rec eval' = function
     | Const  n -> n
     | Var    x -> var_get x
     | Binop  (op, l, r) ->
-      let lv = eval funs var_get l in
-      let rv = eval funs var_get r in
+      let lv = eval' l in
+      let rv = eval' r in
       eval_binop op lv rv
     | FunCall (fname, args) ->
-      (assoc_err fname funs "Function '%s' not found") (List.map (eval funs var_get) args)
+      (assoc_err fname funs "Function '%s' not found") (List.map eval' args)
+    in
+    eval' e
 
 end
 
