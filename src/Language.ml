@@ -6,10 +6,14 @@ struct
   type t =
     | Int   of int
     | Str   of bytes
+    | Arr   of bool * t array
 
-  let t_to_string = function
+  let rec t_to_string = function
     | Int c -> Printf.sprintf "%d" c
     | Str c -> Printf.sprintf "\"%s\"" c
+    | Arr (boxed, a) ->
+      let vals = List.map t_to_string (Array.to_list a) in
+      Printf.sprintf (if boxed then "{%s}" else "[%s]") @@ String.concat "," vals
 end
 
 module Expr =
@@ -21,6 +25,8 @@ struct
     | Var     of string
     | Binop   of string * t * t
     | FunCall of string * t list
+    | Elem    of t * t
+    | Arr     of bool * t list
 
   let bti b = if b then 1 else 0
   let itb i = i <> 0
@@ -32,6 +38,8 @@ struct
     | FunCall (name, args) ->
       let args_str = List.map t_to_string args in
       Printf.sprintf "%s(%s)" name (String.concat ", " args_str)
+    | Elem (arr, el) ->
+      Printf.sprintf "%s[%s]" (t_to_string arr) (t_to_string el)
 
   let eval_binop s (Int x) (Int y) = Int (
     match s with
@@ -69,7 +77,12 @@ struct
                             `Lefta, ["*" ; "/"; "%"];
                        |]
             )
-            primary);
+            unops);
+
+    unops:
+      p:primary idx:(-"[" !(parse) -"]")* {
+        List.fold_left (fun e i -> Elem (e, i)) p idx
+      };
 
     primary:
       "true" {Const (Int 1)}
@@ -82,6 +95,8 @@ struct
       | Some (args) -> FunCall(x, args)
       | None -> Var x
     }
+    | -"[" v:!(Util.list0 parse) -"]" { Arr (false, v) }
+    | -"{" v:!(Util.list0 parse) -"}" { Arr (true, v) }
     | -"(" parse -")"
   )
 
@@ -93,6 +108,7 @@ struct
   type t =
     | Skip
     | Assign of string * Expr.t
+    | AssignArr of string * Expr.t list * Expr.t
     | Seq    of t * t
     | If     of Expr.t * t * t
     | While  of Expr.t * t
@@ -109,7 +125,12 @@ struct
 
     simple:
       x:IDENT res:(
-                ":=" e:!(Expr.parse) {Assign (x, e)}
+                idx:(-"[" !(Expr.parse) -"]")*
+                ":=" e:!(Expr.parse) {
+                  match idx with
+                  | [] -> Assign (x, e)
+                  | _  -> AssignArr (x, idx, e)
+                }
               | "(" args:!(Util.list0 Expr.parse) ")" {
                     Ignore (FunCall (x, args))
                 }
