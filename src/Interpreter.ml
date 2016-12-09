@@ -6,7 +6,7 @@ struct
   open Language.Expr
 
   let eval funs var_get e =
-    let rec eval' = function
+    let rec eval' : Language.Expr.t -> Language.Value.t = function
     | Const  n -> n
     | Var    x -> var_get x
     | Binop  (op, l, r) ->
