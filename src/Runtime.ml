@@ -10,8 +10,17 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
       Printf.printf "%d\n" v;
       Int 0
   );
-  ("writeb", 1, fun [Str v] ->
-      Printf.printf "%s\n" v;
+  ("writeb", 1, fun [v] ->
+      let rec write' = function
+        | Str v -> Printf.sprintf "%s" v;
+        | Arr (false, a) ->
+          let vals = Array.to_list @@ Array.map (fun (Int x) -> string_of_int x) a in
+          Printf.sprintf "[%s]" @@ String.concat ", " vals
+        | Arr (true, a) ->
+          let vals = Array.to_list @@ Array.map write' a in
+          Printf.sprintf "{%s}" @@ String.concat ", " vals
+      in
+      Printf.printf "%s\n" (write' v);
       Int 0
   );
   ("strmake", 2, fun [Int n; Int c] -> Str (Bytes.make n (Char.chr c)));
