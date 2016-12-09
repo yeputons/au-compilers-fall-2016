@@ -4,9 +4,9 @@ open Util
      @type i =
         | S_PUSH  of int
         | S_SPUSH of string
-        | S_ARRAY of bool * int
+        | S_MKARR of bool * int
         | S_ELEM
-        | S_STA
+        | S_STA_DUP
         | S_LD    of string
         | S_ST    of string
         | S_DROP
@@ -36,9 +36,9 @@ let max_stack code =
   let stack_change = function
     | S_PUSH  _ -> (0, true)
     | S_SPUSH _ -> (0, true)
-    | S_ARRAY (_, len) -> (len, true)
+    | S_MKARR _ -> (0, true)
     | S_ELEM    -> (2, true)
-    | S_STA     -> (3, false)
+    | S_STA_DUP -> (3, true)
     | S_LD    _ -> (0, true)
     | S_ST    _ -> (1, false)
     | S_DROP    -> (1, false)
@@ -108,14 +108,14 @@ struct
              (state, (Int n)::stack)
            | S_SPUSH s ->
              (state, (Str s)::stack)
-           | S_ARRAY (boxed, len) ->
-             let (vals, stack') = splitAt len stack in
-             (state, (Arr (boxed, Array.of_list vals))::stack')
+           | S_MKARR (boxed, len) ->
+             let v = if boxed then Str "" else Int 0 in
+             (state, (Arr (boxed, Array.make len v))::stack)
            | S_ELEM ->
              let (Int i)::(Arr (_, a))::stack' = stack in
              (state, (Array.get a i)::stack')
-           | S_STA ->
-             let v::(Int i)::(Arr (_, a))::stack' = stack in
+           | S_STA_DUP ->
+             let v::(Int i)::((Arr (_, a))::_ as stack') = stack in
              Array.set a i v;
              (state, stack')
            | S_LD x ->
@@ -201,8 +201,12 @@ struct
         [|S_ELEM|]
       ]
     | Arr (boxed, es) -> Array.concat [
-        Array.concat @@ List.map expr' @@ List.rev es;
-        [|S_ARRAY (boxed, List.length es)|]
+        [|S_MKARR (boxed, List.length es)|];
+        Array.concat @@ List.flatten @@ List.mapi (fun i x -> [
+              [|S_PUSH i|];
+              expr' x;
+              [|S_STA_DUP|]
+            ]) es
       ]
     in
     expr'
@@ -225,7 +229,8 @@ struct
         Array.concat @@ List.map (fun i -> Array.append (expr' i) [|S_ELEM|]) idx;
         expr' last;
         expr' e;
-        [|S_STA|]
+        [|S_STA_DUP;
+          S_DROP|]
       ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
     | If     (c, t, f) ->
