@@ -1,6 +1,6 @@
 open Util
 
-type opnd = R of int | S of int | A of int | L of int | D of string
+type opnd = R of int | S of int | A of int | L of int | D of string | IA
 
 let x86regs = [|
   "%ebx";
@@ -44,7 +44,7 @@ let set_suf_to_string suf = match suf with
 let byte_reg_to_string r = match r with
   | Al -> "al" | Dl -> "dl"
 
-type binop = Add | Sub | Mul | And | Or | Mov | Cmp
+type binop = Add | Sub | Mul | And | Or | Mov | Cmp | Xchg
 let binop_to_string = function
   | Add -> "addl"
   | Sub -> "subl"
@@ -53,6 +53,7 @@ let binop_to_string = function
   | Or  -> "orl"
   | Mov -> "movl"
   | Cmp -> "cmpl"
+  | Xchg -> "xchg"
 
 type instr =
   | X86Binop of binop * opnd * opnd
@@ -97,6 +98,7 @@ struct
     | A i -> Printf.sprintf "%d(%%ebp)" ((i+2) * word_size) (* +0 - old ebp, +1 - return address, +2 - args *)
     | L i -> Printf.sprintf "$%d" i
     | D s -> Printf.sprintf "$%s" s
+    | IA  -> Printf.sprintf "%d(%%eax,%%edx,%d)" (2 * word_size) word_size
 
   let instr = function
     | X86Binop (o, s1, s2) -> Printf.sprintf "\t%s\t%s,\t%s"
@@ -151,6 +153,28 @@ struct
           | S_SPUSH c ->
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, D (assoc_err c strs "String const '%s' not found"), s)])
+          | S_MKARR (boxed, len) ->
+            let x = allocate env stack in
+            let l = if boxed then "bi_Arrmake" else "bi_arrmake" in
+            (x::stack, gen_call_code l [L len; L 0] x)
+          | S_ELEM ->
+            let i::a::stack' = stack in
+            let x = allocate env stack' in
+            (x::stack', [
+                X86Binop (Mov, a, eax);
+                X86Binop (Mov, i, edx);
+                X86Binop (Mov, IA, eax);
+                X86Binop (Mov, eax, x)
+              ])
+          | S_STA_DUP ->
+            let v::i::a::stack' = stack in
+            (a::stack', [
+                X86Binop (Mov, a, eax);
+                X86Binop (Mov, i, edx);
+                X86Binop (Xchg, v, ebx);
+                X86Binop (Mov, ebx, IA);
+                X86Binop (Xchg, v, ebx);
+              ])
           | S_LD x   ->
             let x' = env#get_var x in
             let s = allocate env stack in
