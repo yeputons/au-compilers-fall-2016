@@ -11,10 +11,12 @@ typedef enum BoxType {
 typedef struct Box {
   BoxType type;
   union {
-    // length of the string, data is implicitly terminated
-    // with NULL (not included in length)
-    int len;
-  } str;
+    struct {
+      // length of the string, data is implicitly terminated
+      // with NULL (not included in length)
+      int len;
+    } str;
+  };
   char data[];
 } Box;
 
