@@ -3,6 +3,7 @@ open Util
 module Expr =
 struct
 
+  open Language.Value
   open Language.Expr
 
   let eval funs var_get e =
@@ -15,6 +16,11 @@ struct
       eval_binop op lv rv
     | FunCall (fname, args) ->
       (assoc_err fname funs "Function '%s' not found") (List.map eval' args)
+    | Elem (arr, el) ->
+      let Language.Value.Arr (_, arr) = eval' arr in
+      let Int el = eval' el in
+      Array.get arr el
+    | Arr (boxed, es) -> Arr (boxed, Array.of_list @@ List.map eval' es)
     in
     eval' e
 
@@ -43,6 +49,18 @@ struct
         | Skip          -> state
         | Seq    (l, r) -> eval' (eval' state l) r
         | Assign (x, e) -> Computing ((x, expr_eval e)::vars)
+        | AssignArr (x, idx, e) ->
+          let Arr (_, x) = var_get x in
+          let idx = List.map expr_eval idx in
+          let v = expr_eval e in
+          let rec assign x idx = match idx with
+            | [Int i] -> Array.set x i v
+            | (Int i)::idx' ->
+              let Arr (_, x') = Array.get x i in
+              assign x' idx'
+          in
+          assign x idx;
+          state
         | Ignore  e     -> ignore @@ expr_eval e; Computing vars
         | Return  e     -> Returned (expr_eval e)
         | If (e, s1, s2) ->
