@@ -40,6 +40,9 @@ struct
       Printf.sprintf "%s(%s)" name (String.concat ", " args_str)
     | Elem (arr, el) ->
       Printf.sprintf "%s[%s]" (t_to_string arr) (t_to_string el)
+    | Arr (boxed, els) ->
+      let els = List.map t_to_string els in
+      Printf.sprintf (if boxed then "{%s}" else "[%s]") (String.concat ", " els)
 
   let eval_binop s (Int x) (Int y) = Int (
     match s with

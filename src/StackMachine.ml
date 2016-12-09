@@ -4,6 +4,9 @@ open Util
      @type i =
         | S_PUSH  of int
         | S_SPUSH of string
+        | S_ARRAY of bool * int
+        | S_ELEM
+        | S_STA
         | S_LD    of string
         | S_ST    of string
         | S_DROP
@@ -33,6 +36,9 @@ let max_stack code =
   let stack_change = function
     | S_PUSH  _ -> (0, true)
     | S_SPUSH _ -> (0, true)
+    | S_ARRAY (_, len) -> (len, true)
+    | S_ELEM    -> (2, true)
+    | S_STA     -> (3, false)
     | S_LD    _ -> (0, true)
     | S_ST    _ -> (1, false)
     | S_DROP    -> (1, false)
@@ -102,6 +108,16 @@ struct
              (state, (Int n)::stack)
            | S_SPUSH s ->
              (state, (Str s)::stack)
+           | S_ARRAY (boxed, len) ->
+             let (vals, stack') = splitAt len stack in
+             (state, (Arr (boxed, Array.of_list vals))::stack')
+           | S_ELEM ->
+             let (Int i)::(Arr (_, a))::stack' = stack in
+             (state, (Array.get a i)::stack')
+           | S_STA ->
+             let v::(Int i)::(Arr (_, a))::stack' = stack in
+             Array.set a i v;
+             (state, stack')
            | S_LD x ->
              assert (List.mem x allowed_vars);
              (state, (assoc_err x state "Variable '%s' not found")::stack)
@@ -179,6 +195,15 @@ struct
           in
           [|S_CALL (lbl, args_cnt)|]
       ]
+    | Elem (a, i) -> Array.concat [
+        expr' a;
+        expr' i;
+        [|S_ELEM|]
+      ]
+    | Arr (boxed, es) -> Array.concat [
+        Array.concat @@ List.map expr' @@ List.rev es;
+        [|S_ARRAY (boxed, List.length es)|]
+      ]
     in
     expr'
 
@@ -190,6 +215,17 @@ struct
         [|S_COMM (x ^ " := " ^ (t_to_string e))|];
         expr' e;
         [|S_ST x|]
+      ]
+    | AssignArr (x, idx, e) ->
+      let idx_names = String.concat ", " @@ List.map t_to_string idx in
+      let (idx, [last]) = splitAt (List.length idx - 1) idx in
+      Array.concat [
+        [|S_COMM (Printf.sprintf "%s[%s] := %s" x idx_names (t_to_string e));
+          S_LD x|];
+        Array.concat @@ List.map (fun i -> Array.append (expr' i) [|S_ELEM|]) idx;
+        expr' last;
+        expr' e;
+        [|S_STA|]
       ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
     | If     (c, t, f) ->
