@@ -5,7 +5,9 @@
 # include <memory.h>
 
 typedef enum BoxType {
-  STR = 0 // arbitrary length string
+  STR = 0, // arbitrary length string
+  UARR = 1, // unboxed array
+  BARR = 2  // boxed array
 } BoxType;
 
 typedef struct Box {
@@ -16,6 +18,10 @@ typedef struct Box {
       // with NULL (not included in length)
       int len;
     } str;
+    union {
+      // length of the array
+      int len;
+    } arr;
   };
   char data[];
 } Box;
@@ -31,10 +37,39 @@ extern void bi_write (int x) {
   printf ("%d\n", x);
 }
 
+void writeb(Box *v) {
+  switch (v->type) {
+  case STR:
+    fwrite (v->data, 1, v->str.len, stdout);
+    break;
+  case UARR:
+    printf("[");
+    for (int i = 0; i < v->arr.len; i++) {
+      if (i > 0) {
+        printf(", ");
+      }
+      printf("%d", *((int*)v->data + i));
+    }
+    printf("]");
+    break;
+  case BARR:
+    printf("{");
+    for (int i = 0; i < v->arr.len; i++) {
+      if (i > 0) {
+        printf(", ");
+      }
+      writeb(*((Box**)v->data + i));
+    }
+    printf("}");
+    break;
+  default:
+    assert(false && "Invalid Box type");
+  }
+}
+
 extern void bi_writeb (Box *v) {
-  assert(v->type == STR);
-  fwrite (v->data, 1, v->str.len, stdout);
-  printf ("\n");
+  writeb(v);
+  printf("\n");
 }
 
 Box* newbox(BoxType type, int data_len) {
@@ -115,5 +150,30 @@ extern Box* bi_strsub(Box *v, int i, int l) {
   Box *nv = newbox(STR, l + 1);
   nv->str.len = l;
   memcpy(nv->data, v->data + i, l + 1);
+  return nv;
+}
+
+extern int bi_arrlen(Box *v) {
+  assert(v->type == UARR || v->type == BARR);
+  return v->arr.len;
+}
+
+extern Box* bi_arrmake(int n, int v) {
+  Box *nv = newbox(UARR, n * sizeof(int));
+  nv->arr.len = n;
+  int *arr = (int*)nv->data;
+  for (int i = 0; i < n; i++) {
+    arr[i] = v;
+  }
+  return nv;
+}
+
+extern Box* bi_Arrmake(int n, Box *v) {
+  Box *nv = newbox(BARR, n * sizeof(Box*));
+  nv->arr.len = n;
+  Box **arr = (Box**)nv->data;
+  for (int i = 0; i < n; i++) {
+    arr[i] = v;
+  }
   return nv;
 }
