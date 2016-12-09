@@ -28,6 +28,9 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
   );
   ("strlen", 1, fun [Str s] -> Int (Bytes.length s));
   ("strsub", 3, fun [Str s; Int i; Int l] -> Str (Bytes.sub s i l));
+  ("arrlen", 1, fun [Arr (_, a)] -> Int (Array.length a));
+  ("arrmake", 2, fun [Int n; v] -> Arr (false, Array.make n v));
+  ("Arrmake", 2, fun [Int n; v] -> Arr (true, Array.make n v))
 ]
 
 let builtins_fun = List.map (fun (n, a, _) -> (FunName n, Builtin a)) builtins
