@@ -128,6 +128,15 @@ struct
     S.elements @@ Array.fold_right add_str code S.empty
 
   let stack_program env strs code =
+    let gen_call_code l args res = List.concat [
+        [X86Push ecx];
+        List.rev @@ List.map (fun n -> X86Push n) args;
+        [X86Call l;
+         X86Binop (Add, L (word_size * (List.length args)), esp);
+         X86Pop ecx;
+         X86Binop (Mov, eax, res)]
+      ]
+    in
     let rec compile stack code =
       match code with
       | []       -> []
@@ -215,14 +224,7 @@ struct
           | S_CALL (l, args_cnt) ->
             let (args, stack') = splitAt args_cnt stack in
             let x = allocate env stack' in
-            (x::stack', List.concat [
-              [X86Push ecx];
-              List.rev @@ List.map (fun n -> X86Push n) args;
-              [X86Call l;
-               X86Binop (Add, L (word_size * (List.length args)), esp);
-               X86Pop ecx;
-               X86Binop (Mov, eax, x)]
-            ])
+            (x::stack', gen_call_code l args x)
           | S_RET l ->
             let [x] = stack in
             ([], [X86Binop (Mov, x, eax); X86Jmp l])
