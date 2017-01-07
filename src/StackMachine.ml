@@ -200,7 +200,7 @@ struct
         expr' i;
         [|S_ELEM|]
       ]
-    | Arr (boxed, es) -> Array.concat [
+    | NewArr (boxed, es) -> Array.concat [
         [|S_MKARR (boxed, List.length es)|];
         Array.concat @@ List.flatten @@ List.mapi (fun i x -> [
               [|S_PUSH i|];

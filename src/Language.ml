@@ -26,7 +26,7 @@ struct
     | Binop   of string * t * t
     | FunCall of string * t list
     | Elem    of t * t
-    | Arr     of bool * t list
+    | NewArr  of bool * t list
 
   let bti b = if b then 1 else 0
   let itb i = i <> 0
@@ -40,7 +40,7 @@ struct
       Printf.sprintf "%s(%s)" name (String.concat ", " args_str)
     | Elem (arr, el) ->
       Printf.sprintf "%s[%s]" (t_to_string arr) (t_to_string el)
-    | Arr (boxed, els) ->
+    | NewArr (boxed, els) ->
       let els = List.map t_to_string els in
       Printf.sprintf (if boxed then "{%s}" else "[%s]") (String.concat ", " els)
 
@@ -98,8 +98,8 @@ struct
       | Some (args) -> FunCall(x, args)
       | None -> Var x
     }
-    | -"[" v:!(Util.list0 parse) -"]" { Arr (false, v) }
-    | -"{" v:!(Util.list0 parse) -"}" { Arr (true, v) }
+    | -"[" v:!(Util.list0 parse) -"]" { NewArr (false, v) }
+    | -"{" v:!(Util.list0 parse) -"}" { NewArr (true, v) }
     | -"(" parse -")"
   )
 

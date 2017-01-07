@@ -20,7 +20,7 @@ struct
       let Language.Value.Arr (_, arr) = eval' arr in
       let Int el = eval' el in
       Array.get arr el
-    | Arr (boxed, es) -> Arr (boxed, Array.of_list @@ List.map eval' es)
+    | NewArr (boxed, es) -> Arr (boxed, Array.of_list @@ List.map eval' es)
     in
     eval' e
 
