@@ -36,6 +36,7 @@ struct
     | FunCall of string * t list
     | Elem    of t * t
     | NewArr  of bool * t list
+    | NewMArr of bool * t list
 
   let bti b = if b then 1 else 0
   let itb i = i <> 0
@@ -107,9 +108,14 @@ struct
       | Some (args) -> FunCall(x, args)
       | None -> Var x
     }
-    | -"[" v:!(Util.list0 parse) -"]" { NewArr (false, v) }
-    | -"{" v:!(Util.list0 parse) -"}" { NewArr (true, v) }
+    | arr[ostap ("[")][ostap ("]")][false]
+    | arr[ostap ("{")][ostap ("}")][true]
     | -"(" parse -")"
+    ;
+
+    arr[obr][cbr][t]:
+      obr v:!(Util.list (arr obr cbr t )) cbr { NewMArr (t, v) }
+    | obr v:!(Util.list0 parse) cbr { NewArr (t, v) }
   )
 
 end
