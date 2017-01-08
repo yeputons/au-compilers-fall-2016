@@ -6,14 +6,23 @@ struct
   type t =
     | Int   of int
     | Str   of bytes
-    | Arr   of bool * t array
+    | Arr   of bool * tarr
+  and tarr =
+    | LastDim of t array
+    | MidDim of tarr array
 
   let rec t_to_string = function
     | Int c -> Printf.sprintf "%d" c
     | Str c -> Printf.sprintf "\"%s\"" c
     | Arr (boxed, a) ->
-      let vals = List.map t_to_string (Array.to_list a) in
-      Printf.sprintf (if boxed then "{%s}" else "[%s]") @@ String.concat "," vals
+      let vals = tarr_to_string a in
+      Printf.sprintf (if boxed then "{%s}" else "[%s]") vals
+  and tarr_to_string = function
+    | LastDim vs ->
+      String.concat "," @@ List.map t_to_string @@ Array.to_list vs
+    | MidDim vs ->
+      let conv a = Printf.sprintf "<%s>" (tarr_to_string a) in
+      String.concat "," @@ List.map conv @@ Array.to_list vs
 end
 
 module Expr =

@@ -17,10 +17,10 @@ struct
     | FunCall (fname, args) ->
       (assoc_err fname funs "Function '%s' not found") (List.map eval' args)
     | Elem (arr, el) ->
-      let Language.Value.Arr (_, arr) = eval' arr in
+      let Language.Value.Arr (_, LastDim arr) = eval' arr in
       let Int el = eval' el in
       Array.get arr el
-    | NewArr (boxed, es) -> Arr (boxed, Array.of_list @@ List.map eval' es)
+    | NewArr (boxed, es) -> Arr (boxed, LastDim (Array.of_list @@ List.map eval' es))
     in
     eval' e
 
@@ -50,13 +50,13 @@ struct
         | Seq    (l, r) -> eval' (eval' state l) r
         | Assign (x, e) -> Computing ((x, expr_eval e)::vars)
         | AssignArr (x, idx, e) ->
-          let Arr (_, x) = var_get x in
+          let Arr (_, LastDim x) = var_get x in
           let idx = List.map expr_eval idx in
           let v = expr_eval e in
           let rec assign x idx = match idx with
             | [Int i] -> Array.set x i v
             | (Int i)::idx' ->
-              let Arr (_, x') = Array.get x i in
+              let Arr (_, LastDim x') = Array.get x i in
               assign x' idx'
           in
           assign x idx;

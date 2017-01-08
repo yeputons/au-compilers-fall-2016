@@ -110,12 +110,12 @@ struct
              (state, (Str s)::stack)
            | S_MKARR (boxed, len) ->
              let v = if boxed then Str "" else Int 0 in
-             (state, (Arr (boxed, Array.make len v))::stack)
+             (state, (Arr (boxed, LastDim (Array.make len v)))::stack)
            | S_ELEM ->
-             let (Int i)::(Arr (_, a))::stack' = stack in
+             let (Int i)::(Arr (_, LastDim a))::stack' = stack in
              (state, (Array.get a i)::stack')
            | S_STA_DUP ->
-             let v::(Int i)::((Arr (_, a))::_ as stack') = stack in
+             let v::(Int i)::((Arr (_, LastDim a))::_ as stack') = stack in
              Array.set a i v;
              (state, stack')
            | S_LD x ->

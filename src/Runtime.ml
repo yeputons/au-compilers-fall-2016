@@ -11,14 +11,26 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
       Int 0
   );
   ("writeb", 1, fun [v] ->
-      let rec write' = function
+      let rec print_val boxed = function
+        | Arr (boxed', v) ->
+          assert boxed;
+          print_arr boxed' v
+        | Str v ->
+          assert boxed;
+          v
+        | Int v ->
+          assert (not boxed);
+          Printf.sprintf "%d" v
+      and print_arr boxed (a:tarr) =
+        let vals = String.concat ", " @@ match a with
+          | LastDim vs -> List.map (print_val boxed) @@ Array.to_list vs
+          | MidDim vs  -> List.map (print_arr boxed) @@ Array.to_list vs
+        in
+        Printf.sprintf (if boxed then "{%s}" else "[%s]") vals
+      in
+      let write' = function
         | Str v -> Printf.sprintf "%s" v;
-        | Arr (false, a) ->
-          let vals = Array.to_list @@ Array.map (fun (Int x) -> string_of_int x) a in
-          Printf.sprintf "[%s]" @@ String.concat ", " vals
-        | Arr (true, a) ->
-          let vals = Array.to_list @@ Array.map write' a in
-          Printf.sprintf "{%s}" @@ String.concat ", " vals
+        | Arr (boxed, a) -> print_arr boxed a
       in
       Printf.printf "%s\n" (write' v);
       Int 0
@@ -37,9 +49,9 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
   );
   ("strlen", 1, fun [Str s] -> Int (Bytes.length s));
   ("strsub", 3, fun [Str s; Int i; Int l] -> Str (Bytes.sub s i l));
-  ("arrlen", 1, fun [Arr (_, a)] -> Int (Array.length a));
-  ("arrmake", 2, fun [Int n; v] -> Arr (false, Array.make n v));
-  ("Arrmake", 2, fun [Int n; v] -> Arr (true, Array.make n v))
+  ("arrlen", 1, fun [Arr (_, LastDim a)] -> Int (Array.length a));
+  ("arrmake", 2, fun [Int n; v] -> Arr (false, LastDim (Array.make n v)));
+  ("Arrmake", 2, fun [Int n; v] -> Arr (true, LastDim (Array.make n v)))
 ]
 
 let builtins_fun = List.map (fun (n, a, _) -> (FunName n, Builtin a)) builtins
