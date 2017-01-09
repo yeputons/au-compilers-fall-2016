@@ -1,0 +1,19 @@
+fun foo() begin
+  return "foo"
+end
+
+a := [[1 + 1, 2 + 2, 3 + 3], [4 + 4, 5 + 5, 6 + 6]];
+write(arrlenm(a, 0));
+write(arrlenm(a, 1));
+
+b := {{foo(), foo(), foo()}};
+write(arrlenm(b, 0));
+write(arrlenm(b, 1));
+
+c := [1, 2];
+write(arrlen(c));
+write(arrlenm(c, 0));
+
+d := {{}};
+write(arrlenm(d, 0));
+write(arrlenm(d, 1))

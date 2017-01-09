@@ -51,7 +51,15 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
   ("strsub", 3, fun [Str s; Int i; Int l] -> Str (Bytes.sub s i l));
   ("arrlen", 1, fun [Arr (_, LastDim a)] -> Int (Array.length a));
   ("arrmake", 2, fun [Int n; v] -> Arr (false, LastDim (Array.make n v)));
-  ("Arrmake", 2, fun [Int n; v] -> Arr (true, LastDim (Array.make n v)))
+  ("Arrmake", 2, fun [Int n; v] -> Arr (true, LastDim (Array.make n v)));
+  ("arrlenm", 2, fun [Arr (_, a); Int i] ->
+      let rec get_len a = function
+        | 0 -> (match a with LastDim a -> Int (Array.length a)
+                           | MidDim a -> Int (Array.length a))
+        | i -> (match a with MidDim a -> get_len (Array.get a 0) (i - 1))
+      in
+      get_len a i
+  )
 ]
 
 let builtins_fun = List.map (fun (n, a, _) -> (FunName n, Builtin a)) builtins
