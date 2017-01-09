@@ -185,7 +185,7 @@ struct
     | FunCall (name, args) -> Array.concat [
         Array.concat @@ List.map expr' @@ List.rev args;
         let (args_cnt, f) = assoc_err name funs "Function '%s' not found" in
-        if not (args_cnt == List.length args) then
+        if (args_cnt != -1) && (args_cnt != List.length args) then
           failwith @@ Printf.sprintf "Invalid number of arguments for function '%s': expected %d, found %d"
             name args_cnt (List.length args)
         else
@@ -193,7 +193,7 @@ struct
             | UserFun -> "fun_" ^ name
             | Builtin -> "bi_" ^ name
           in
-          [|S_CALL (lbl, args_cnt)|]
+          [|S_CALL (lbl, List.length args)|]
       ]
     | Elem (a, [i]) -> Array.concat [
         expr' a;

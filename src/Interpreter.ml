@@ -118,7 +118,7 @@ struct
             | Fun (arg_names, body) -> List.length arg_names
             | Builtin x -> x
           in
-          if (args_cnt != List.length arg_vals) then
+          if (args_cnt != -1) && (args_cnt != List.length arg_vals) then
             failwith @@ Printf.sprintf "Invalid number of arguments for function '%s': expected %d, found %d"
               name args_cnt (List.length arg_vals)
           else
