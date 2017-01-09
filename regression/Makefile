@@ -1,5 +1,5 @@
-TESTS_STACK=
-TESTS_INTERPRET=testy024 testy025 testy026 testy027 testy028 testy029
+TESTS_STACK=testy024 testy025 testy026 testy027 testy028 testy029
+TESTS_INTERPRET=
 TESTS_IGNORE=
 TESTS_ORIG=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET) $(TESTS_IGNORE), $(sort $(basename $(wildcard test???.expr))))
 TESTS_Y=$(filter-out $(TESTS_STACK) $(TESTS_INTERPRET) $(TESTS_IGNORE), $(sort $(basename $(wildcard testy???.expr))))
