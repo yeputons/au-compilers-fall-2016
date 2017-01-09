@@ -60,7 +60,22 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
       in
       get_len a i
   )
-]
+] @ (
+    let rec make_arr v = function
+      | [Int n] -> LastDim (Array.make n v)
+      | (Int n)::dims' -> MidDim (Array.init n (fun _ -> make_arr v dims'))
+    in
+    [
+      ("arrmakem", -1, fun ((Int d)::v::dims) ->
+          assert (List.length dims == d);
+          Arr (false, make_arr v dims)
+      );
+      ("Arrmakem", -1, fun ((Int d)::v::dims) ->
+          assert (List.length dims == d);
+          Arr (true, make_arr v dims)
+      )
+    ]
+  )
 
 let builtins_fun = List.map (fun (n, a, _) -> (FunName n, Builtin a)) builtins
 let builtins_impl = List.map (fun (n, _, f) -> ("bi_" ^ n, f)) builtins
