@@ -61,17 +61,15 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
       get_len a i
   )
 ] @ (
-    let rec make_arr v = function
-      | [Int n] -> LastDim (Array.make n v)
-      | (Int n)::dims' -> MidDim (Array.init n (fun _ -> make_arr v dims'))
-    in
     [
       ("arrmakem", -1, fun ((Int d)::v::dims) ->
           assert (List.length dims == d);
+          let dims = List.map (fun (Int x) -> x) dims in
           Arr (false, make_arr v dims)
       );
       ("Arrmakem", -1, fun ((Int d)::v::dims) ->
           assert (List.length dims == d);
+          let dims = List.map (fun (Int x) -> x) dims in
           Arr (true, make_arr v dims)
       )
     ]

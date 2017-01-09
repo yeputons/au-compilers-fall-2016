@@ -24,6 +24,10 @@ struct
       let conv a = Printf.sprintf "<%s>" (tarr_to_string a) in
       String.concat "," @@ List.map conv @@ Array.to_list vs
 
+  let rec make_arr v = function
+    | [n] -> LastDim (Array.make n v)
+    | n::dims' -> MidDim (Array.init n (fun _ -> make_arr v dims'))
+
   let rec get_last_dim x idx =
     match x with
     | LastDim a ->
