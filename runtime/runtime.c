@@ -37,7 +37,7 @@ extern void bi_write (int x) {
   printf ("%d\n", x);
 }
 
-void writeb(Box *v) {
+static void writeb(Box *v) {
   switch (v->type) {
   case STR:
     fwrite (v->data, 1, v->str.len, stdout);
@@ -72,7 +72,7 @@ extern void bi_writeb (Box *v) {
   printf("\n");
 }
 
-Box* newbox(BoxType type, int data_len) {
+static Box* newbox(BoxType type, int data_len) {
   Box* res = malloc(sizeof(Box) + data_len);
   res->type = type;
   return res;
