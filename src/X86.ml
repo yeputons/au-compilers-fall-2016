@@ -1,6 +1,15 @@
 open Util
 
-type opnd = R of int | S of int | A of int | L of int | D of string | IA
+(*
+ * R - register and its id
+ * S - temporary stack variable #x
+ * A - argument #x
+ * L - constant
+ * D - address of label
+ * IB - int %edx inside a box, which is pointed to by %eax
+ * B - int #x inside a box, which is pointed to by %eax
+ *)
+type opnd = R of int | S of int | A of int | L of int | D of string | IB | B of int
 
 let x86regs = [|
   "%ebx";
@@ -98,7 +107,8 @@ struct
     | A i -> Printf.sprintf "%d(%%ebp)" ((i+2) * word_size) (* +0 - old ebp, +1 - return address, +2 - args *)
     | L i -> Printf.sprintf "$%d" i
     | D s -> Printf.sprintf "$%s" s
-    | IA  -> Printf.sprintf "%d(%%eax,%%edx,%d)" (2 * word_size) word_size
+    | IB  -> Printf.sprintf "%d(%%eax,%%edx,%d)" (2 * word_size) word_size
+    | B i -> Printf.sprintf "%d(%%eax)" ((2 + i) * word_size)
 
   let instr = function
     | X86Binop (o, s1, s2) -> Printf.sprintf "\t%s\t%s,\t%s"
@@ -139,6 +149,20 @@ struct
          X86Binop (Mov, eax, res)]
       ]
     in
+    (* Pre-condition: eax contains pointer to the
+     *                beginning of the boxed array.
+     * Post-condition: eax is not changed, edx now contains correct
+     *                 offset inside the array.
+     *)
+    let gen_arr_idx_code (i0::idx) = List.flatten [
+        [X86Binop (Mov, i0, edx)];
+        List.flatten @@ List.mapi (fun d i -> [
+              X86Binop (Mul, B (1 + d), edx);
+              X86Binop (Add, i, edx)
+            ]) idx;
+        [X86Binop (Add, L (1 + List.length idx), edx)];
+      ]
+    in
     let rec compile stack code =
       match code with
       | []       -> []
@@ -153,27 +177,28 @@ struct
           | S_SPUSH c ->
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, D (assoc_err c strs "String const '%s' not found"), s)])
-          | S_MKARR (boxed, [len]) ->
+          | S_MKARR (boxed, dims) ->
             let x = allocate env stack in
-            let l = if boxed then "bi_Arrmake" else "bi_arrmake" in
-            (x::stack, gen_call_code l [L len; L 0] x)
-          | S_ELEM 1 ->
-            let i::a::stack' = stack in
+            let l = if boxed then "bi_Arrmakem" else "bi_arrmakem" in
+            let dims = List.map (fun i -> (L i:opnd)) dims in
+            (x::stack, gen_call_code l ([(L (List.length dims):opnd); (L 0:opnd)]@dims) x)
+          | S_ELEM dims ->
+            let (idx, a::stack') = splitAt dims stack in
             let x = allocate env stack' in
-            (x::stack', [
-                X86Binop (Mov, a, eax);
-                X86Binop (Mov, i, edx);
-                X86Binop (Mov, IA, eax);
-                X86Binop (Mov, eax, x)
+            (x::stack', List.flatten [
+                [X86Binop (Mov, a, eax)];
+                gen_arr_idx_code idx;
+                [X86Binop (Mov, IB, eax);
+                 X86Binop (Mov, eax, x)]
               ])
-          | S_STA_DUP 1 ->
-            let v::i::a::stack' = stack in
-            (a::stack', [
-                X86Binop (Mov, a, eax);
-                X86Binop (Mov, i, edx);
-                X86Binop (Xchg, v, ebx);
-                X86Binop (Mov, ebx, IA);
-                X86Binop (Xchg, v, ebx);
+          | S_STA_DUP dims ->
+            let (v::idx, a::stack') = splitAt (dims + 1) stack in
+            (a::stack', List.flatten [
+                [X86Binop (Mov, a, eax)];
+                gen_arr_idx_code idx;
+                [X86Binop (Xchg, v, ebx);
+                 X86Binop (Mov, ebx, IB);
+                 X86Binop (Xchg, v, ebx)]
               ])
           | S_LD x   ->
             let x' = env#get_var x in

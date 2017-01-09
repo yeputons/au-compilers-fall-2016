@@ -2,6 +2,7 @@
 # include <stdbool.h>
 # include <stdio.h>
 # include <stdlib.h>
+# include <stdarg.h>
 # include <memory.h>
 
 typedef enum BoxType {
@@ -19,12 +20,30 @@ typedef struct Box {
       int len;
     } str;
     union {
-      // length of the array
-      int len;
+      // number of dimensions in the array.
+      // their sizes are stored in first ints of data[],
+      // followed by real array data.
+      int dims;
     } arr;
   };
   char data[];
 } Box;
+
+static int* get_arr_dims(Box *v) {
+  return (int*)v->data;
+}
+
+static void* get_arr_start(Box *v) {
+  return (int*)v->data + v->arr.dims;
+}
+
+static int get_arr_n(Box *v) {
+  int n = 1;
+  int *dims = get_arr_dims(v);
+  for (int i = 0; i < v->arr.dims; i++)
+    n *= dims[i];
+  return n;
+}
 
 extern int bi_read () {
   int d;
@@ -37,31 +56,47 @@ extern void bi_write (int x) {
   printf ("%d\n", x);
 }
 
+static void writeb(Box *v);
+
+static void writea(int tag, int d, int *dims, int n, char* start) {
+  if (d == 0) {
+    if (tag == UARR) {
+      assert(n == sizeof(int));
+      printf("%d", *(int*)start);
+    } else {
+      assert(n == sizeof(Box*));
+      writeb(*(Box**)start);
+    }
+    return;
+  }
+  printf(tag == UARR ? "[" : "{");
+  int step = dims[0] ? n / dims[0] : 0;
+  for (int i = 0; i < dims[0]; i++) {
+    if (i > 0) {
+      printf(", ");
+    }
+    writea(tag, d - 1, dims + 1, step, start);
+    start += step;
+  }
+  printf(tag == UARR ? "]" : "}");
+}
+
 static void writeb(Box *v) {
   switch (v->type) {
   case STR:
     fwrite (v->data, 1, v->str.len, stdout);
     break;
   case UARR:
-    printf("[");
-    for (int i = 0; i < v->arr.len; i++) {
-      if (i > 0) {
-        printf(", ");
-      }
-      printf("%d", *((int*)v->data + i));
-    }
-    printf("]");
-    break;
-  case BARR:
-    printf("{");
-    for (int i = 0; i < v->arr.len; i++) {
-      if (i > 0) {
-        printf(", ");
-      }
-      writeb(*((Box**)v->data + i));
-    }
-    printf("}");
-    break;
+  case BARR: {
+    int el_size = v->type == UARR ? sizeof(int) : sizeof(Box*);
+    writea(
+      v->type,
+      v->arr.dims,
+      get_arr_dims(v),
+      el_size * get_arr_n(v),
+      get_arr_start(v)
+    );
+  } break;
   default:
     assert(false && "Invalid Box type");
   }
@@ -155,25 +190,68 @@ extern Box* bi_strsub(Box *v, int i, int l) {
 
 extern int bi_arrlen(Box *v) {
   assert(v->type == UARR || v->type == BARR);
-  return v->arr.len;
+  assert(v->arr.dims == 1);
+  return get_arr_dims(v)[0];
+}
+
+extern int bi_arrlenm(Box *v, int i) {
+  assert(v->type == UARR || v->type == BARR);
+  assert(i < v->arr.dims);
+  return get_arr_dims(v)[i];
+}
+
+static Box* prepare_arr(int tag, int d, va_list dims, int *n) {
+  va_list dims2;
+  va_copy(dims2, dims);
+  *n = 1;
+  for (int i = 0; i < d; i++) {
+    *n *= va_arg(dims2, int);
+  }
+  va_end(dims2);
+
+  Box *nv = newbox(tag, d * sizeof(int) + *n * sizeof(int));
+  nv->arr.dims = d;
+  int *nv_dims = get_arr_dims(nv);
+  for (int i = 0; i < d; i++) {
+    nv_dims[i] = va_arg(dims, int);
+  }
+  return nv;
+}
+
+extern Box* bi_arrmakem(int d, int v, ...) {
+  int n;
+
+  va_list dims;
+  va_start(dims, v);
+  Box *nv = prepare_arr(UARR, d, dims, &n);
+  va_end(dims);
+
+  int *arr = get_arr_start(nv);
+  for (int i = 0; i < n; i++) {
+    arr[i] = v;
+  }
+  return nv;
+}
+
+extern Box* bi_Arrmakem(int d, Box *v, ...) {
+  int n;
+
+  va_list dims;
+  va_start(dims, v);
+  Box *nv = prepare_arr(BARR, d,  dims, &n);
+  va_end(dims);
+
+  Box **arr = get_arr_start(nv);
+  for (int i = 0; i < n; i++) {
+    arr[i] = v;
+  }
+  return nv;
 }
 
 extern Box* bi_arrmake(int n, int v) {
-  Box *nv = newbox(UARR, n * sizeof(int));
-  nv->arr.len = n;
-  int *arr = (int*)nv->data;
-  for (int i = 0; i < n; i++) {
-    arr[i] = v;
-  }
-  return nv;
+  return bi_arrmakem(1, v, n);
 }
 
 extern Box* bi_Arrmake(int n, Box *v) {
-  Box *nv = newbox(BARR, n * sizeof(Box*));
-  nv->arr.len = n;
-  Box **arr = (Box**)nv->data;
-  for (int i = 0; i < n; i++) {
-    arr[i] = v;
-  }
-  return nv;
+  return bi_Arrmakem(1, v, n);
 }
