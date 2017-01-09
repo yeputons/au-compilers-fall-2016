@@ -153,11 +153,11 @@ struct
           | S_SPUSH c ->
             let s = allocate env stack in
             (s::stack, [X86Binop (Mov, D (assoc_err c strs "String const '%s' not found"), s)])
-          | S_MKARR (boxed, len) ->
+          | S_MKARR (boxed, [len]) ->
             let x = allocate env stack in
             let l = if boxed then "bi_Arrmake" else "bi_arrmake" in
             (x::stack, gen_call_code l [L len; L 0] x)
-          | S_ELEM ->
+          | S_ELEM 1 ->
             let i::a::stack' = stack in
             let x = allocate env stack' in
             (x::stack', [
@@ -166,7 +166,7 @@ struct
                 X86Binop (Mov, IA, eax);
                 X86Binop (Mov, eax, x)
               ])
-          | S_STA_DUP ->
+          | S_STA_DUP 1 ->
             let v::i::a::stack' = stack in
             (a::stack', [
                 X86Binop (Mov, a, eax);

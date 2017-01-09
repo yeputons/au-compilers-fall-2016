@@ -4,9 +4,9 @@ open Util
      @type i =
         | S_PUSH  of int
         | S_SPUSH of string
-        | S_MKARR of bool * int
-        | S_ELEM
-        | S_STA_DUP
+        | S_MKARR of bool * int list
+        | S_ELEM  of int
+        | S_STA_DUP of int
         | S_LD    of string
         | S_ST    of string
         | S_DROP
@@ -37,8 +37,8 @@ let max_stack code =
     | S_PUSH  _ -> (0, true)
     | S_SPUSH _ -> (0, true)
     | S_MKARR _ -> (0, true)
-    | S_ELEM    -> (2, true)
-    | S_STA_DUP -> (3, true)
+    | S_ELEM  d -> (1 + d, true)
+    | S_STA_DUP d -> (2 + d, true)
     | S_LD    _ -> (0, true)
     | S_ST    _ -> (1, false)
     | S_DROP    -> (1, false)
@@ -108,14 +108,16 @@ struct
              (state, (Int n)::stack)
            | S_SPUSH s ->
              (state, (Str s)::stack)
-           | S_MKARR (boxed, len) ->
+           | S_MKARR (boxed, dims) ->
              let v = if boxed then Str "" else Int 0 in
-             (state, (Arr (boxed, LastDim (Array.make len v)))::stack)
-           | S_ELEM ->
-             let (Int i)::(Arr (_, LastDim a))::stack' = stack in
+             (state, (Arr (boxed, make_arr v dims))::stack)
+           | S_ELEM d ->
+             let (idx, Arr (_, a)::stack') = splitAt d stack in
+             let (a, i) = get_last_dim a idx in
              (state, (Array.get a i)::stack')
-           | S_STA_DUP ->
-             let v::(Int i)::((Arr (_, LastDim a))::_ as stack') = stack in
+           | S_STA_DUP d ->
+             let (v::idx, ((Arr (_, a))::_ as stack')) = splitAt (d + 1) stack in
+             let (a, i) = get_last_dim a idx in
              Array.set a i v;
              (state, stack')
            | S_LD x ->
@@ -195,18 +197,37 @@ struct
           in
           [|S_CALL (lbl, List.length args)|]
       ]
-    | Elem (a, [i]) -> Array.concat [
+    | Elem (a, idx) -> Array.concat [
         expr' a;
-        expr' i;
-        [|S_ELEM|]
+        Array.concat @@ List.map expr' @@ List.rev idx;
+        [|S_ELEM (List.length idx)|]
       ]
-    | NewArr (boxed, es) -> Array.concat [
-        [|S_MKARR (boxed, List.length es)|];
-        Array.concat @@ List.flatten @@ List.mapi (fun i x -> [
-              [|S_PUSH i|];
+    | (NewArr (boxed, es) | NewMArr (boxed, es) as x) ->
+      let rec get_dims = function
+        | NewArr (_, es) -> [List.length es]
+        | NewMArr (_, es) -> (List.length es)::get_dims (List.hd es)
+      in
+      let rec collect_data prefix dims = function
+        | NewArr (_, es) ->
+          let [dim] = dims in
+          assert (dim == List.length es);
+          List.mapi (fun i e -> (prefix@[i], e)) es
+        | NewMArr (_, es) ->
+          let dim::dims = dims in
+          assert (dim == List.length es);
+          List.flatten @@ List.mapi (
+            fun i e -> collect_data (prefix@[i]) dims e
+          ) es
+      in
+      let dims = get_dims x in
+      let data = collect_data [] dims x in
+      Array.concat [
+        [|S_MKARR (boxed, dims)|];
+        Array.concat @@ List.flatten @@ List.map (fun (idx, x) -> [
+              Array.map (fun i -> S_PUSH i) @@ Array.of_list @@ List.rev idx;
               expr' x;
-              [|S_STA_DUP|]
-            ]) es
+              [| S_STA_DUP (List.length idx) |]
+            ]) data
       ]
     in
     expr'
@@ -221,16 +242,23 @@ struct
         [|S_ST x|]
       ]
     | AssignArr (x, idx, e) ->
-      let idx = List.map (function [x] -> x) idx in (* TODO: multidimensional arrays *)
-      let idx_names = String.concat ", " @@ List.map t_to_string idx in
+      let idx_names = String.concat "" @@ List.map (
+          fun cidx ->
+            let cidx' = String.concat ", " @@ List.map t_to_string cidx in
+            Printf.sprintf "[%s]" cidx'
+        ) idx in
       let (idx, [last]) = splitAt (List.length idx - 1) idx in
       Array.concat [
-        [|S_COMM (Printf.sprintf "%s[%s] := %s" x idx_names (t_to_string e));
+        [|S_COMM (Printf.sprintf "%s%s := %s" x idx_names (t_to_string e));
           S_LD x|];
-        Array.concat @@ List.map (fun i -> Array.append (expr' i) [|S_ELEM|]) idx;
-        expr' last;
+        Array.concat @@ List.map (
+          fun cidx ->
+            Array.concat @@
+              (List.map expr' @@ List.rev cidx)@[ [|S_ELEM (List.length cidx)|] ]
+        ) idx;
+        Array.concat @@ List.map expr' @@ List.rev last;
         expr' e;
-        [|S_STA_DUP;
+        [|S_STA_DUP (List.length last);
           S_DROP|]
       ]
     | Seq    (l, r) -> Array.append (stmt' l) (stmt' r)
