@@ -1,0 +1,16 @@
+a := arrmakem(3, 1, 1, 3, 2);
+write(arrlenm(a, 0));
+write(arrlenm(a, 1));
+write(arrlenm(a, 2));
+write(a[0, 0, 0]);
+write(a[0, 0, 1]);
+write(a[0, 1, 0]);
+write(a[0, 1, 1]);
+a[0, 0, 0] := 10;
+a[0, 0, 1] := 11;
+a[0, 1, 0] := 12;
+a[0, 1, 1] := 13;
+write(a[0, 0, 0]);
+write(a[0, 0, 1]);
+write(a[0, 1, 0]);
+write(a[0, 1, 1])
