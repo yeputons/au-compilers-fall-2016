@@ -195,7 +195,7 @@ struct
           in
           [|S_CALL (lbl, args_cnt)|]
       ]
-    | Elem (a, i) -> Array.concat [
+    | Elem (a, [i]) -> Array.concat [
         expr' a;
         expr' i;
         [|S_ELEM|]
@@ -221,6 +221,7 @@ struct
         [|S_ST x|]
       ]
     | AssignArr (x, idx, e) ->
+      let idx = List.map (function [x] -> x) idx in (* TODO: multidimensional arrays *)
       let idx_names = String.concat ", " @@ List.map t_to_string idx in
       let (idx, [last]) = splitAt (List.length idx - 1) idx in
       Array.concat [

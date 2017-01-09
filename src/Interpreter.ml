@@ -16,7 +16,7 @@ struct
       eval_binop op lv rv
     | FunCall (fname, args) ->
       (assoc_err fname funs "Function '%s' not found") (List.map eval' args)
-    | Elem (arr, el) ->
+    | Elem (arr, [el]) ->
       let Language.Value.Arr (_, LastDim arr) = eval' arr in
       let Int el = eval' el in
       Array.get arr el
@@ -51,6 +51,7 @@ struct
         | Assign (x, e) -> Computing ((x, expr_eval e)::vars)
         | AssignArr (x, idx, e) ->
           let Arr (_, LastDim x) = var_get x in
+          let idx = List.map (function [x] -> x) idx in (* TODO: multidimensional arrays *)
           let idx = List.map expr_eval idx in
           let v = expr_eval e in
           let rec assign x idx = match idx with

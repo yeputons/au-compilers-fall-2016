@@ -34,7 +34,7 @@ struct
     | Var     of string
     | Binop   of string * t * t
     | FunCall of string * t list
-    | Elem    of t * t
+    | Elem    of t * t list
     | NewArr  of bool * t list
     | NewMArr of bool * t list
 
@@ -48,8 +48,9 @@ struct
     | FunCall (name, args) ->
       let args_str = List.map t_to_string args in
       Printf.sprintf "%s(%s)" name (String.concat ", " args_str)
-    | Elem (arr, el) ->
-      Printf.sprintf "%s[%s]" (t_to_string arr) (t_to_string el)
+    | Elem (arr, els) ->
+      let els = String.concat ", " (List.map t_to_string els) in
+      Printf.sprintf "%s[%s]" (t_to_string arr) els
     | NewArr (boxed, els) ->
       let els = List.map t_to_string els in
       Printf.sprintf (if boxed then "{%s}" else "[%s]") (String.concat ", " els)
@@ -93,7 +94,7 @@ struct
             unops);
 
     unops:
-      p:primary idx:(-"[" !(parse) -"]")* {
+      p:primary idx:(-"[" !(Util.list parse) -"]")* {
         List.fold_left (fun e i -> Elem (e, i)) p idx
       };
 
@@ -126,7 +127,7 @@ struct
   type t =
     | Skip
     | Assign of string * Expr.t
-    | AssignArr of string * Expr.t list * Expr.t
+    | AssignArr of string * Expr.t list list * Expr.t
     | Seq    of t * t
     | If     of Expr.t * t * t
     | While  of Expr.t * t
@@ -143,7 +144,7 @@ struct
 
     simple:
       x:IDENT res:(
-                idx:(-"[" !(Expr.parse) -"]")*
+                idx:(-"[" !(Util.list Expr.parse) -"]")*
                 ":=" e:!(Expr.parse) {
                   match idx with
                   | [] -> Assign (x, e)
