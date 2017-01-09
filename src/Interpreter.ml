@@ -16,11 +16,20 @@ struct
       eval_binop op lv rv
     | FunCall (fname, args) ->
       (assoc_err fname funs "Function '%s' not found") (List.map eval' args)
-    | Elem (arr, [el]) ->
-      let Language.Value.Arr (_, LastDim arr) = eval' arr in
-      let Int el = eval' el in
-      Array.get arr el
+    | Elem (arr, els) ->
+      let Language.Value.Arr (_, arr) = eval' arr in
+      let (arr, i) = get_last_dim arr (List.map eval' els) in
+      Array.get arr i
     | NewArr (boxed, es) -> Arr (boxed, LastDim (Array.of_list @@ List.map eval' es))
+    | NewMArr (boxed, es) ->
+      let eval_sub e =
+        match eval' e with
+          Arr (boxed', a) ->
+          assert (boxed == boxed');
+          a
+      in
+      let es = Array.of_list @@ List.map eval_sub es in
+      Arr (boxed, MidDim es)
     in
     eval' e
 
@@ -50,14 +59,17 @@ struct
         | Seq    (l, r) -> eval' (eval' state l) r
         | Assign (x, e) -> Computing ((x, expr_eval e)::vars)
         | AssignArr (x, idx, e) ->
-          let Arr (_, LastDim x) = var_get x in
-          let idx = List.map (function [x] -> x) idx in (* TODO: multidimensional arrays *)
-          let idx = List.map expr_eval idx in
+          let Arr (_, x) = var_get x in
+          let idx = List.map (List.map expr_eval) idx in
           let v = expr_eval e in
-          let rec assign x idx = match idx with
-            | [Int i] -> Array.set x i v
-            | (Int i)::idx' ->
-              let Arr (_, LastDim x') = Array.get x i in
+          let rec assign x idx =
+            match idx with
+            | [cidx] ->
+              let (arr, i) = get_last_dim x cidx in
+              Array.set arr i v
+            | cidx::idx' ->
+              let (arr, i) = get_last_dim x cidx in
+              let Arr (_, x') = Array.get arr i in
               assign x' idx'
           in
           assign x idx;

@@ -23,6 +23,15 @@ struct
     | MidDim vs ->
       let conv a = Printf.sprintf "<%s>" (tarr_to_string a) in
       String.concat "," @@ List.map conv @@ Array.to_list vs
+
+  let rec get_last_dim x idx =
+    match x with
+    | LastDim a ->
+      let [Int i] = idx in
+      (a, i)
+    | MidDim a ->
+      let (Int i)::idx' = idx in
+      get_last_dim (Array.get a i) idx'
 end
 
 module Expr =
