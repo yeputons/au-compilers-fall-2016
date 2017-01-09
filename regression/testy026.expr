@@ -1,0 +1,14 @@
+hello := {{ {"a", "b"}, ({"c"}) }};
+writeb(hello[0, 0]);
+writeb(hello[0, 1]);
+writeb(hello[0, 0][0]);
+writeb(hello[0, 0][1]);
+writeb(hello[0, 1][0]);
+
+hello[0, 0] := "foo";
+writeb(hello[0, 0]);
+writeb(hello[0, 1]);
+
+hello[0, 1] := "bar";
+writeb(hello[0, 0]);
+writeb(hello[0, 1])
