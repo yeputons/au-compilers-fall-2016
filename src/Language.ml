@@ -51,7 +51,7 @@ struct
     | Elem (arr, els) ->
       let els = String.concat ", " (List.map t_to_string els) in
       Printf.sprintf "%s[%s]" (t_to_string arr) els
-    | NewArr (boxed, els) ->
+    | NewArr (boxed, els) | NewMArr (boxed, els) ->
       let els = List.map t_to_string els in
       Printf.sprintf (if boxed then "{%s}" else "[%s]") (String.concat ", " els)
 
