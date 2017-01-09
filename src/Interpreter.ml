@@ -20,16 +20,12 @@ struct
       let Language.Value.Arr (_, arr) = eval' arr in
       let (arr, i) = get_last_dim arr (List.map eval' els) in
       Array.get arr i
-    | NewArr (boxed, es) -> Arr (boxed, LastDim (Array.of_list @@ List.map eval' es))
-    | NewMArr (boxed, es) ->
-      let eval_sub e =
-        match eval' e with
-          Arr (boxed', a) ->
-          assert (boxed == boxed');
-          a
+    | NewArr (boxed, es) ->
+      let rec eval_sub = function
+        | NMidDim es -> MidDim (Array.of_list @@ List.map eval_sub es)
+        | NLastDim es -> LastDim (Array.of_list @@ List.map eval' es)
       in
-      let es = Array.of_list @@ List.map eval_sub es in
-      Arr (boxed, MidDim es)
+      Arr (boxed, eval_sub es)
     in
     eval' e
 

@@ -202,17 +202,17 @@ struct
         Array.concat @@ List.map expr' @@ List.rev idx;
         [|S_ELEM (List.length idx)|]
       ]
-    | (NewArr (boxed, es) | NewMArr (boxed, es) as x) ->
+    | NewArr (boxed, x) ->
       let rec get_dims = function
-        | NewArr (_, es) -> [List.length es]
-        | NewMArr (_, es) -> (List.length es)::get_dims (List.hd es)
+        | NLastDim es -> [List.length es]
+        | NMidDim es -> (List.length es)::get_dims (List.hd es)
       in
       let rec collect_data prefix dims = function
-        | NewArr (_, es) ->
+        | NLastDim es ->
           let [dim] = dims in
           assert (dim == List.length es);
           List.mapi (fun i e -> (prefix@[i], e)) es
-        | NewMArr (_, es) ->
+        | NMidDim es ->
           let dim::dims = dims in
           assert (dim == List.length es);
           List.flatten @@ List.mapi (

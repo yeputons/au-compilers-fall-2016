@@ -48,8 +48,10 @@ struct
     | Binop   of string * t * t
     | FunCall of string * t list
     | Elem    of t * t list
-    | NewArr  of bool * t list
-    | NewMArr of bool * t list
+    | NewArr  of bool * tarr
+  and tarr =
+    | NLastDim of t list
+    | NMidDim of tarr list
 
   let bti b = if b then 1 else 0
   let itb i = i <> 0
@@ -64,9 +66,15 @@ struct
     | Elem (arr, els) ->
       let els = String.concat ", " (List.map t_to_string els) in
       Printf.sprintf "%s[%s]" (t_to_string arr) els
-    | NewArr (boxed, els) | NewMArr (boxed, els) ->
-      let els = List.map t_to_string els in
-      Printf.sprintf (if boxed then "{%s}" else "[%s]") (String.concat ", " els)
+    | NewArr (boxed, els) ->
+      let rec tarr_to_string = function
+        | NLastDim els ->
+          let els = List.map t_to_string els in
+          Printf.sprintf (if boxed then "{%s}" else "[%s]") (String.concat ", " els)
+        | NMidDim els ->
+          Printf.sprintf "<%s>" (String.concat ", " @@ List.map tarr_to_string els)
+      in
+      tarr_to_string els
 
   let eval_binop s (Int x) (Int y) = Int (
     match s with
@@ -122,14 +130,14 @@ struct
       | Some (args) -> FunCall(x, args)
       | None -> Var x
     }
-    | arr[ostap ("[")][ostap ("]")][false]
-    | arr[ostap ("{")][ostap ("}")][true]
+    | a:arr[ostap ("[")][ostap ("]")] { NewArr(false, a) }
+    | a:arr[ostap ("{")][ostap ("}")] { NewArr(true, a) }
     | -"(" parse -")"
     ;
 
-    arr[obr][cbr][t]:
-      obr v:!(Util.list (arr obr cbr t )) cbr { NewMArr (t, v) }
-    | obr v:!(Util.list0 parse) cbr { NewArr (t, v) }
+    arr[obr][cbr]:
+      obr v:!(Util.list (arr obr cbr )) cbr { NMidDim v }
+    | obr v:!(Util.list0 parse) cbr { NLastDim v }
   )
 
 end
