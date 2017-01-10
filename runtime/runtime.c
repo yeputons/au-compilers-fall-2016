@@ -50,7 +50,7 @@ extern int bi_read () {
   printf ("> ");
   scanf ("%d", &d);
   static char buf[1024 * 1024];
-  assert(fgets(buf, sizeof buf, stdin));
+  fgets(buf, sizeof buf, stdin);
   return d;
 }
 
