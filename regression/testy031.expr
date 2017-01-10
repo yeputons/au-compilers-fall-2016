@@ -1,0 +1,49 @@
+-- http://acmp.ru/index.asp?main=task&id_task=518
+
+fun parse_field(strs) begin
+  f := arrmakem(2, 0, arrlen(strs), strlen(strs[0]));
+  for y := 0, y < arrlen(strs), y := y + 1 do
+    for x := 0, x < strlen(strs[y]), x := x + 1 do
+      f[y, x] := strget(strs[y], x) - '0'
+    od
+  od;
+  return f
+end
+
+n := read();
+k := read();
+strs := Arrmake(n, "");
+for y := 0, y < arrlen(strs), y := y + 1 do
+  strs[y] := reads()
+od;
+f := parse_field(strs);
+
+dyn := Arrmakem(2, [], arrlenm(f, 0), arrlenm(f, 1));
+for y := 0, y < arrlenm(f, 0), y := y + 1 do
+  for x := 0, x < arrlenm(f, 1), x := x + 1 do
+    dyn[y, x] := arrmake(k + 1, 0)
+  od
+od;
+dyn[0, 0][0] := 1;
+
+dx := [ 1, 0, -1, 0 ];
+dy := [ 0, -1, 0, 1 ];
+
+for step := 0, step < k, step := step + 1 do
+  for y := 0, y < arrlenm(dyn, 0), y := y + 1 do
+    for x := 0, x < arrlenm(dyn, 1), x := x + 1 do
+      for d := 0, d < arrlen(dx), d := d + 1 do
+        nx := x + dx[d];
+        ny := y + dy[d];
+        if nx < 0 !! ny < 0 !! nx >= arrlenm(dyn, 0) !! ny >= arrlenm(dyn, 1) then
+          skip  -- Do nothing
+        elif f[ny, nx] != 0 then
+          skip  -- Do nothing
+        else
+          dyn[ny, nx][step + 1] := dyn[ny, nx][step + 1] + dyn[y, x][step]
+        fi
+      od
+    od
+  od
+od;
+write(dyn[arrlenm(dyn, 0) - 1, arrlenm(dyn, 1) - 1][k])
