@@ -1,0 +1,4 @@
+repeat
+  s := reads();
+  writeb(s)
+until strcmp(s, "end") == 0

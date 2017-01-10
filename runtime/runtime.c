@@ -122,6 +122,19 @@ extern Box* bi_strmake(int n, int c) {
   return v;
 }
 
+extern Box* bi_reads() {
+  static char buf[1024 * 1024];
+  assert(fgets(buf, sizeof buf, stdin));
+  int len = strlen(buf);
+  while (len && strchr("\n\r", buf[len - 1])) {
+    buf[--len] = 0;
+  }
+  Box *v = newbox(STR, len + 1);
+  v->str.len = len;
+  memcpy(v->data, buf, len + 1);
+  return v;
+}
+
 extern Box* bi_strset(Box *v, int i, int c) {
   assert(v->type == STR);
   assert(0 <= i && i < v->str.len);

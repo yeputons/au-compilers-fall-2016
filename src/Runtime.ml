@@ -6,6 +6,9 @@ let builtins : (string * int * (Language.Value.t list -> Language.Value.t)) list
       Printf.printf "> ";
       Int (read_int ())
   );
+  ("reads", 0, fun [] ->
+      Str (read_line ())
+  );
   ("write", 1, fun [Int v] ->
       Printf.printf "%d\n" v;
       Int 0
