@@ -49,6 +49,8 @@ extern int bi_read () {
   int d;
   printf ("> ");
   scanf ("%d", &d);
+  static char buf[1024 * 1024];
+  assert(fgets(buf, sizeof buf, stdin));
   return d;
 }
 
